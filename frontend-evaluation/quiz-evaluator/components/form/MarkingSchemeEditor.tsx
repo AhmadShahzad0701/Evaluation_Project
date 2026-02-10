@@ -16,7 +16,6 @@ const PREDEFINED_SCHEMES: Omit<MarkingScheme, "probability">[] = [
 ];
 
 export default function MarkingSchemeEditor({ schemes, onChange }: Props) {
-  // Initialize predefined schemes once
   const initializedSchemes: MarkingScheme[] =
     schemes.length > 0
       ? schemes
@@ -25,49 +24,74 @@ export default function MarkingSchemeEditor({ schemes, onChange }: Props) {
           probability: 0,
         }));
 
-  const updateProbability = (id: string, value: number) => {
-    const updated = initializedSchemes.map((s) =>
-      s.id === id ? { ...s, probability: value } : s,
-    );
-    onChange(updated);
-  };
-
   const total = initializedSchemes.reduce(
-    (sum, s) => sum + (s.probability || 0),
-    0,
+    (sum, s) => sum + s.probability,
+    0
   );
+
+  const remaining = 100 - total;
+
+  const updateProbability = (id: string, value: number) => {
+    const safeValue = Math.max(0, Math.min(100, value));
+
+    const updated = initializedSchemes.map((s) =>
+      s.id === id ? { ...s, probability: safeValue } : s
+    );
+
+    const newTotal = updated.reduce(
+      (sum, s) => sum + s.probability,
+      0
+    );
+
+    if (newTotal <= 100) {
+      onChange(updated);
+    }
+  };
 
   return (
     <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5">
-      <div className="grid grid-cols-3 text-sm font-medium text-slate-600 pb-2 border-b border-slate-200">
+      <div className="grid grid-cols-3 pb-2 text-sm font-medium text-slate-600 border-b border-slate-200">
         <span className="col-span-2">Marking Scheme</span>
         <span className="text-right">Weight (%)</span>
       </div>
 
-      {initializedSchemes.map((scheme) => (
-        <div
-          key={scheme.id}
-          className="grid grid-cols-3 items-center gap-4 py-2"
-        >
-          <span className="col-span-2 text-sm text-slate-800">
-            {scheme.label}
-          </span>
+      {initializedSchemes.map((scheme) => {
+        const maxAllowed = scheme.probability + remaining;
 
-          <div className="flex items-center justify-end gap-1">
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={scheme.probability === 0 ? "" : scheme.probability}
-              onChange={(e) =>
-                updateProbability(scheme.id, Number(e.target.value))
-              }
-              className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-right text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-slate-700">%</span>
+        return (
+          <div
+            key={scheme.id}
+            className="grid grid-cols-3 items-center gap-4 py-2"
+          >
+            <span className="col-span-2 text-sm text-slate-800">
+              {scheme.label}
+            </span>
+
+            <div className="flex items-center justify-end gap-1">
+              <input
+                type="number"
+                min={0}
+                max={maxAllowed}
+                value={scheme.probability === 0 ? "" : scheme.probability}
+                onChange={(e) =>
+                  updateProbability(
+                    scheme.id,
+                    Number(e.target.value)
+                  )
+                }
+                className={`w-20 rounded-md border px-2 py-1 text-sm text-right focus:outline-none focus:ring-2
+                  ${
+                    total >= 100 && scheme.probability === 0
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-white text-slate-900 border-slate-300 focus:ring-blue-500"
+                  }`}
+                disabled={total >= 100 && scheme.probability === 0}
+              />
+              <span className="text-sm font-medium text-slate-700">%</span>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <div className="flex items-center justify-between pt-3 border-t border-slate-200">
         <span className="text-sm font-medium text-slate-700">
@@ -76,16 +100,24 @@ export default function MarkingSchemeEditor({ schemes, onChange }: Props) {
 
         <span
           className={`text-sm font-semibold ${
-            total === 100 ? "text-green-600" : "text-red-600"
+            total === 100
+              ? "text-green-600"
+              : "text-red-600"
           }`}
         >
           {total}%
         </span>
       </div>
 
+      {total >= 100 && (
+        <p className="text-xs text-green-700">
+          Total probability reached 100%. Reduce an existing value to adjust.
+        </p>
+      )}
+
       <p className="text-xs text-slate-500">
-        Distribute a total of 100% across the predefined schemes. Schemes with
-        0% weight will be ignored during evaluation.
+        Distribute a total of 100% across the predefined schemes.
+        Schemes with 0% weight will be ignored during evaluation.
       </p>
     </div>
   );
