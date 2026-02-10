@@ -1,0 +1,26 @@
+question_id,question,student_answer,human_score,max_score,system_score
+Q1,What is Machine Learning?,Machine learning allows computers to learn from data.,7,10,7
+Q1,What is Machine Learning?,It is a branch of AI where systems improve using experience.,8,10,5.5
+Q1,What is Machine Learning?,ML is when computers find patterns automatically.,6,10,6.2
+Q1,What is Machine Learning?,Machine learning is part of AI that learns patterns from data to make predictions.,9,10,7.8
+Q1,What is Machine Learning?,Computers are programmed to learn by themselves.,5,10,5.5
+Q2,Define Artificial Intelligence.,AI is the simulation of human intelligence in machines.,8,10,6.5
+Q2,Define Artificial Intelligence.,Artificial intelligence allows machines to think like humans.,7,10,7.5
+Q2,Define Artificial Intelligence.,AI is making computers intelligent.,6,10,5.5
+Q2,Define Artificial Intelligence.,AI refers to systems that can perform tasks requiring human intelligence.,9,10,5.7
+Q2,Define Artificial Intelligence.,AI is used in robots.,4,10,5.5
+Q3,What is Overfitting in machine learning?,Overfitting happens when a model memorizes training data.,7,10,6
+Q3,What is Overfitting in machine learning?,It occurs when a model performs well on training data but poorly on new data.,9,10,5.5
+Q3,What is Overfitting in machine learning?,Overfitting means the model learns noise instead of patterns.,8,10,6
+Q3,What is Overfitting in machine learning?,When a model is too complex and fits data exactly.,6,10,6
+Q3,What is Overfitting in machine learning?,Overfitting is a type of error.,4,10,6.5
+Q4,What is supervised learning?,Supervised learning uses labeled data for training.,8,10,7
+Q4,What is supervised learning?,It is a learning method where output is already known.,7,10,7
+Q4,What is supervised learning?,Learning with correct answers provided.,6,10,6.2
+Q4,What is supervised learning?,A technique where models are trained using labeled datasets.,9,10,5.5
+Q4,What is supervised learning?,Supervised learning uses data.,4,10,7
+Q5,What is a neural network?,A neural network is inspired by the human brain.,7,10,7.9
+Q5,What is a neural network?,It is a model made of interconnected neurons used for learning.,8,10,6.7
+Q5,What is a neural network?,Neural networks consist of layers that process information.,9,10,6.1
+Q5,What is a neural network?,Neural networks are used in deep learning.,6,10,6.1
+Q5,What is a neural network?,It is an AI model.,5,10,2.9
