@@ -21,7 +21,7 @@ aggregator = Aggregator()
 
 @router.post("/", response_model=EvaluationResponse)
 def evaluate(request: EvaluationRequest):
-    llm_judge = LLMJudge()
+    llm_judge = LLMJudge()  # may timeout → handled safely
     results = []
     overall_max_marks = 0
     overall_obtained_marks = 0.0
@@ -32,7 +32,7 @@ def evaluate(request: EvaluationRequest):
             if item.question_type != "descriptive":
                 continue
 
-            # Step 1
+            # ---------- STEP 1: BASE RUBRIC EVAL ----------
             base_eval = descriptive_engine.evaluate(
                 question=item.question,
                 answer=item.student_answer or "",
@@ -40,28 +40,44 @@ def evaluate(request: EvaluationRequest):
                 max_score=item.max_score
             )
 
-            # Step 2
+            # ---------- STEP 2: SIMILARITY ----------
             similarity_score = similarity_engine.evaluate(
                 student_answer=item.student_answer or "",
                 reference_answer=None
             )
 
-            # Step 3
+            # ---------- STEP 3: NLI ----------
             nli_score = nli_engine.evaluate(
                 question=item.question,
                 student_answer=item.student_answer or "",
                 reference_answer=None
             )
 
-            # Step 4
-            llm_eval = llm_judge.evaluate(
-                question=item.question,
-                student_answer=item.student_answer or "",
-                rubric=item.rubric or descriptive_engine.DEFAULT_RUBRIC,
-                max_score=item.max_score
-            )
+            # ---------- STEP 4: LLM (SAFE FALLBACK) ----------
+            try:
+                llm_eval = llm_judge.evaluate(
+                    question=item.question,
+                    student_answer=item.student_answer or "",
+                    rubric=item.rubric or descriptive_engine.DEFAULT_RUBRIC,
+                    max_score=item.max_score
+                )
+            except Exception as llm_error:
+                print("⚠️ LLM ERROR (fallback used):", llm_error)
 
-            # Step 5
+                llm_eval = {
+                    "score": (
+                        base_eval["total_score"] / item.max_score
+                        if item.max_score > 0
+                        else 0.0
+                    ),
+                    "justification": (
+                        "LLM evaluation unavailable. "
+                        "Rubric-based scoring applied."
+                    ),
+                    "weight_adjustment": None
+                }
+
+            # ---------- STEP 5: AGGREGATION ----------
             aggregated = aggregator.aggregate(
                 scores={
                     "llm": llm_eval["score"],
@@ -73,16 +89,16 @@ def evaluate(request: EvaluationRequest):
                 llm_adjustment=llm_eval.get("weight_adjustment")
             )
 
-            # ✅ STEP 6 — MUST BE INSIDE LOOP
             obtained = round(aggregated["final_marks"], 2)
 
             overall_max_marks += item.max_score
             overall_obtained_marks += obtained
 
+            # ---------- STEP 6: RESULT ----------
             results.append(
                 EvaluationResult(
-                    student_id=item.student_id,
-                    question_id=item.question_id,
+                    student_id=item.student_id or "unknown",
+                    question_id=item.question_id or "unknown",
                     max_marks=item.max_score,
                     obtained_marks=obtained,
                     breakdown=base_eval["breakdown"],
@@ -96,7 +112,6 @@ def evaluate(request: EvaluationRequest):
                 )
             )
 
-        # ✅ RETURN AFTER LOOP
         return EvaluationResponse(
             results=results,
             overall_max_marks=overall_max_marks,
@@ -104,5 +119,5 @@ def evaluate(request: EvaluationRequest):
         )
 
     except Exception as e:
-        print("ENGINE ERROR:", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        print("❌ ENGINE ERROR:", str(e))
+        raise HTTPException(status_code=500, detail="Evaluation failed")

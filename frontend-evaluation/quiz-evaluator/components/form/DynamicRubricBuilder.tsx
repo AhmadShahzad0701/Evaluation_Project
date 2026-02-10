@@ -1,11 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { QuestionRubric } from "@/types/rubric";
-import QuestionRubricCard from "./QuestionRubricCard";
 import { EvaluationSubmission } from "@/types/submission";
+import { mapToEvaluationRequest } from "@/utils/mapToEvaluationRequest";
+
+import QuestionRubricCard from "./QuestionRubricCard";
+import EvaluationLoader from "@/components/ui/EvaluationLoader";
+
+// ⏱️ helper to ensure loader visibility
+const wait = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function DynamicRubricBuilder() {
+  const router = useRouter();
+
   const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<QuestionRubric[]>([
     {
@@ -16,6 +27,8 @@ export default function DynamicRubricBuilder() {
       schemes: [],
     },
   ]);
+
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const addQuestion = () => {
     setQuestions((prev) => [
@@ -31,12 +44,14 @@ export default function DynamicRubricBuilder() {
   };
 
   const updateQuestion = (index: number, updated: QuestionRubric) => {
-    setQuestions((prev) => prev.map((q, i) => (i === index ? updated : q)));
+    setQuestions((prev) =>
+      prev.map((q, i) => (i === index ? updated : q))
+    );
   };
 
-  // ✅ SUBMIT HANDLER
-  const handleSubmit = () => {
-    // BASIC VALIDATION
+  // ✅ SUBMIT HANDLER (WITH LOADER)
+  const handleSubmit = async () => {
+    // ---------- VALIDATION ----------
     if (!quizTitle.trim()) {
       alert("Quiz title is required.");
       return;
@@ -58,7 +73,9 @@ export default function DynamicRubricBuilder() {
           q.schemes?.reduce((sum, s) => sum + s.probability, 0) ?? 0;
 
         if (total !== 100) {
-          alert(`Question ${q.questionNo}: Marking scheme total must be 100%.`);
+          alert(
+            `Question ${q.questionNo}: Marking scheme total must be 100%.`
+          );
           return;
         }
       }
@@ -69,7 +86,7 @@ export default function DynamicRubricBuilder() {
       }
     }
 
-    // FINAL PAYLOAD
+    // ---------- FRONTEND PAYLOAD ----------
     const payload: EvaluationSubmission = {
       quizTitle,
       questions: questions.map((q) => ({
@@ -84,18 +101,56 @@ export default function DynamicRubricBuilder() {
                 probability: s.probability,
               }))
             : undefined,
-        customRubric: q.type === "custom" ? q.customText : undefined,
+        customRubric:
+          q.type === "custom" ? q.customText : undefined,
       })),
     };
 
-    console.log("FINAL SUBMISSION PAYLOAD:", payload);
+    // ---------- MAP TO BACKEND ----------
+    const evaluationRequest =
+      mapToEvaluationRequest(payload);
 
-    // TEMP: show result page
-    alert("Evaluation submitted successfully!");
+    try {
+      setIsEvaluating(true);
+
+      // ensure loader renders
+      await wait(300);
+
+      const response = await fetch(
+        "http://localhost:8000/evaluate/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(evaluationRequest),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Evaluation failed");
+      }
+
+      const evaluationResult = await response.json();
+
+      localStorage.setItem(
+        "evaluationResult",
+        JSON.stringify(evaluationResult)
+      );
+
+      // UX guarantee: loader visible
+      await wait(800);
+
+      router.push("/result");
+    } catch (error) {
+      console.error(error);
+      alert("Error while evaluating answers.");
+    } finally {
+      setIsEvaluating(false);
+    }
   };
 
+  // ✅ JSX RENDER (OUTSIDE handleSubmit)
   return (
-    <div className="space-y-8">
+    <div className="relative space-y-8">
       {/* Quiz Title */}
       <div>
         <label className="block text-sm font-medium text-slate-700">
@@ -105,7 +160,7 @@ export default function DynamicRubricBuilder() {
           value={quizTitle}
           onChange={(e) => setQuizTitle(e.target.value)}
           placeholder="Enter quiz title"
-          className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -114,7 +169,9 @@ export default function DynamicRubricBuilder() {
         <QuestionRubricCard
           key={q.questionNo}
           data={q}
-          onChange={(updated) => updateQuestion(i, updated)}
+          onChange={(updated) =>
+            updateQuestion(i, updated)
+          }
         />
       ))}
 
@@ -122,18 +179,23 @@ export default function DynamicRubricBuilder() {
       <div className="flex items-center justify-between">
         <button
           onClick={addQuestion}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          disabled={isEvaluating}
+          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
         >
           + Add Question
         </button>
 
         <button
           onClick={handleSubmit}
-          className="rounded-md bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          disabled={isEvaluating}
+          className="rounded-md bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           Submit Evaluation
         </button>
       </div>
+
+      {/* Loader Overlay */}
+      {isEvaluating && <EvaluationLoader />}
     </div>
   );
 }

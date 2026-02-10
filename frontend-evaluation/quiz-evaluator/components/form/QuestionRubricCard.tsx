@@ -24,7 +24,7 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
           value={data.questionText}
           onChange={(e) => onChange({ ...data, questionText: e.target.value })}
           placeholder="Enter the question here..."
-          className="w-full h-24 rounded-lg border border-slate-300 bg-slate-50 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full h-24 rounded-lg border text-slate-900 border-slate-300 bg-slate-50 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -35,7 +35,7 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
           value={data.studentAnswer}
           onChange={(e) => onChange({ ...data, studentAnswer: e.target.value })}
           placeholder="Student answer will appear here..."
-          className="w-full h-24 rounded-lg border border-slate-300 bg-slate-50 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full h-24 rounded-lg border text-slate-900 border-slate-300 bg-slate-50 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
