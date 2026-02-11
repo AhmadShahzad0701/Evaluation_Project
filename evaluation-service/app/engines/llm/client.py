@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from typing import Dict, Any, Optional
 
 
 class LLMClient:
@@ -9,7 +10,7 @@ class LLMClient:
     def __init__(self, model: str):
         self.model = model
 
-    def send_prompt(self, prompt: str) -> dict:
+    def send_prompt(self, prompt: str) -> Dict[str, Any]:
         api_key = os.getenv("OPENROUTER_API_KEY")
 
         if not api_key:
@@ -35,7 +36,7 @@ class LLMClient:
             self.OPENROUTER_API_URL,
             headers=headers,
             json=payload,
-            timeout=60
+            timeout=120  # Increased from 60s to 120s for slower responses
         )
 
         if response.status_code != 200:

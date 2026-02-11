@@ -2,15 +2,397 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========================================
+   🎨 MODERN DESIGN SYSTEM - SAAS PLATFORM
+   ======================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* 🎨 Brand Colors - Modern Purple-Blue-Pink Palette */
+  --primary-50: hsl(260, 100%, 98%);
+  --primary-100: hsl(260, 95%, 95%);
+  --primary-200: hsl(260, 90%, 88%);
+  --primary-300: hsl(260, 85%, 78%);
+  --primary-400: hsl(260, 80%, 68%);
+  --primary-500: hsl(260, 75%, 58%);
+  --primary-600: hsl(260, 70%, 48%);
+  --primary-700: hsl(260, 65%, 38%);
+  --primary-800: hsl(260, 60%, 28%);
+  --primary-900: hsl(260, 55%, 18%);
+  
+  /* 🔮 Accent Colors */
+  --accent-purple: hsl(280, 85%, 60%);
+  --accent-blue: hsl(220, 90%, 60%);
+  --accent-pink: hsl(340, 85%, 65%);
+  --accent-teal: hsl(180, 75%, 50%);
+  --accent-orange: hsl(25, 95%, 60%);
+  
+  /* 🌈 Gradient Definitions */
+  --gradient-primary: linear-gradient(135deg, hsl(260, 75%, 58%) 0%, hsl(220, 90%, 60%) 100%);
+  --gradient-purple-pink: linear-gradient(135deg, hsl(280, 85%, 60%) 0%, hsl(340, 85%, 65%) 100%);
+  --gradient-blue-teal: linear-gradient(135deg, hsl(220, 90%, 60%) 0%, hsl(180, 75%, 50%) 100%);
+  --gradient-sunset: linear-gradient(135deg, hsl(340, 85%, 65%) 0%, hsl(25, 95%, 60%) 100%);
+  --gradient-mesh: radial-gradient(at 40% 20%, hsla(280, 85%, 60%, 0.25) 0, transparent 50%),
+                   radial-gradient(at 80% 0%, hsla(220, 90%, 60%, 0.25) 0, transparent 50%),
+                   radial-gradient(at 0% 50%, hsla(340, 85%, 65%, 0.20) 0, transparent 50%),
+                   radial-gradient(at 80% 50%, hsla(180, 75%, 50%, 0.15) 0, transparent 50%);
+  
+  /* 🎭 Glassmorphism */
+  --glass-bg: hsla(0, 0%, 100%, 0.7);
+  --glass-border: hsla(0, 0%, 100%, 0.18);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  
+  /* 🌟 Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 0 0 20px rgba(138, 99, 239, 0.3);
+  --shadow-glow-strong: 0 0 40px rgba(138, 99, 239, 0.5);
+  
+  /* ⏱️ Animation Timings */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* 📏 Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  /* 🔤 Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ========================================
+   🎯 BASE STYLES
+   ======================================== */
+
+* {
+  font-family: var(--font-family);
+}
+
+body {
+  @apply antialiased;
+  background: linear-gradient(135deg, hsl(250, 60%, 98%) 0%, hsl(220, 70%, 96%) 100%);
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(0, 0%, 96%);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, hsl(260, 75%, 58%), hsl(220, 90%, 60%));
+  border-radius: 10px;
+  transition: background var(--transition-base);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, hsl(260, 80%, 50%), hsl(220, 90%, 55%));
+}
+
+/* ========================================
+   📝 TYPOGRAPHY
+   ======================================== */
 
 h1 {
-  @apply text-3xl font-semibold text-slate-900;
+  @apply text-4xl font-bold;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 h2 {
-  @apply text-xl font-semibold text-slate-900;
+  @apply text-2xl font-bold text-slate-900;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  @apply text-xl font-semibold text-slate-800;
+  letter-spacing: -0.01em;
 }
 
 label {
   @apply text-sm font-medium text-slate-700;
+  letter-spacing: 0.01em;
 }
+
+p {
+  @apply text-slate-600 leading-relaxed;
+}
+
+/* ========================================
+   🎨 UTILITY CLASSES
+   ======================================== */
+
+@layer components {
+  /* Glass Card */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Premium Card */
+  .premium-card {
+    @apply bg-white rounded-2xl shadow-lg border border-slate-100 transition-all duration-300;
+  }
+  
+  .premium-card:hover {
+    @apply shadow-2xl translate-y-[-2px];
+    box-shadow: var(--shadow-glow);
+  }
+  
+  /* Gradient Text */
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .gradient-text-purple {
+    background: var(--gradient-purple-pink);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Gradient Borders */
+  .gradient-border {
+    position: relative;
+    background: white;
+    border-radius: 1rem;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 2px;
+    background: var(--gradient-primary);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+  
+  /* Animated Gradient Background */
+  .animated-gradient {
+    background: linear-gradient(135deg, hsl(260, 75%, 58%), hsl(220, 90%, 60%), hsl(280, 85%, 60%));
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
+  }
+  
+  /* Input Styles */
+  .input-modern {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-900;
+    @apply focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100;
+    @apply transition-all duration-300;
+    @apply placeholder:text-slate-400;
+  }
+  
+  .input-modern:hover {
+    @apply border-slate-300;
+  }
+  
+  /* Textarea Styles */
+  .textarea-modern {
+    @apply input-modern resize-none;
+    min-height: 120px;
+  }
+  
+  /* Button Styles */
+  .btn-primary {
+    @apply px-6 py-3 rounded-xl font-semibold text-white;
+    @apply transition-all duration-300 transform;
+    @apply shadow-lg hover:shadow-xl active:scale-95;
+    background: var(--gradient-primary);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, hsl(260, 80%, 50%), hsl(220, 90%, 55%));
+    opacity: 0;
+    transition: opacity var(--transition-base);
+  }
+  
+  .btn-primary:hover::before {
+    opacity: 1;
+  }
+  
+  .btn-primary > * {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 rounded-xl font-semibold text-slate-700 bg-white border-2 border-slate-200;
+    @apply hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50;
+    @apply transition-all duration-300 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg font-medium text-slate-600;
+    @apply hover:bg-slate-100 hover:text-slate-900;
+    @apply transition-all duration-200;
+  }
+  
+  /* Badge Styles */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-700;
+  }
+  
+  .badge-success {
+    @apply badge bg-green-100 text-green-700;
+  }
+  
+  .badge-warning {
+    @apply badge bg-orange-100 text-orange-700;
+  }
+  
+  .badge-gradient {
+    @apply badge text-white;
+    background: var(--gradient-primary);
+  }
+  
+  /* Progress Bar */
+  .progress-bar {
+    @apply h-2 rounded-full bg-slate-200 overflow-hidden;
+  }
+  
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500;
+    background: var(--gradient-primary);
+  }
+  
+  /* Floating Label Input Container */
+  .floating-input-container {
+    @apply relative mt-6;
+  }
+  
+  .floating-input {
+    @apply input-modern peer;
+  }
+  
+  .floating-label {
+    @apply absolute left-4 -top-7 text-sm font-medium text-slate-700;
+    @apply transition-all duration-200;
+    @apply peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-placeholder-shown:text-slate-400;
+    @apply peer-focus:-top-7 peer-focus:text-sm peer-focus:text-primary-600;
+  }
+}
+
+/* ========================================
+   ✨ ANIMATIONS
+   ======================================== */
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Animation Utility Classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Stagger animations for lists */
+.stagger-item {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0.1s; }
+.stagger-item:nth-child(2) { animation-delay: 0.2s; }
+.stagger-item:nth-child(3) { animation-delay: 0.3s; }
+.stagger-item:nth-child(4) { animation-delay: 0.4s; }
+.stagger-item:nth-child(5) { animation-delay: 0.5s; }

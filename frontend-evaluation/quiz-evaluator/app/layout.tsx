@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Quiz Evaluator",
-  description: "AI-assisted quiz evaluation system",
+  title: "Quiz Evaluator Pro - AI-Powered Assessment Platform",
+  description: "Modern SAAS platform for automated quiz evaluation with AI-powered grading and comprehensive feedback",
 };
 
 export default function RootLayout({
@@ -21,9 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
+        {children}
       </body>
     </html>
   );
