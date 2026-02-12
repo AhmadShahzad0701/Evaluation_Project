@@ -20,21 +20,15 @@ class Aggregator:
         # Calculate numerator
         numerator = (
             breakdown.conceptual_understanding * weights.conceptual_understanding +
-            breakdown.language_clarity * weights.language_clarity +
-            breakdown.answer_completeness * weights.answer_completeness +
-            breakdown.spelling_accuracy * weights.spelling_accuracy +
-            breakdown.handling_incorrect * weights.handling_incorrect +
-            breakdown.effort_bonus * weights.effort_bonus
+            breakdown.completeness_length * weights.completeness_length +
+            breakdown.language_clarity * weights.language_clarity
         )
         
         # Calculate denominator (sum of all weights)
         total_weight = (
             weights.conceptual_understanding +
-            weights.language_clarity +
-            weights.answer_completeness +
-            weights.spelling_accuracy +
-            weights.handling_incorrect +
-            weights.effort_bonus
+            weights.completeness_length +
+            weights.language_clarity
         )
         
         # Avoid division by zero

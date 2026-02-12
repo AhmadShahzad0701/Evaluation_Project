@@ -24,8 +24,8 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
             Question {data.questionNo}
           </h3>
         </div>
-        <span className="badge-gradient">Strict Mode</span>
-      </div>
+        </div>
+
 
       {/* Question Text */}
       <div className="space-y-2">

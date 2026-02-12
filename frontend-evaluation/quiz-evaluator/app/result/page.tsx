@@ -14,6 +14,7 @@ type EvaluationResult = {
     nli?: number;
     similarity?: number;
   };
+  rubric: Record<string, number>; // original weights
   confidence: number;
 };
 
@@ -60,6 +61,14 @@ export default function ResultPage() {
   };
 
   const formatKey = (key: string) => {
+    const map: Record<string, string> = {
+      conceptual_understanding: "Conceptual Understanding",
+      completeness_length: "Completeness & Length",
+      language_clarity: "Language Clarity",
+      answering_accuracy: "Accuracy",
+    };
+    if (map[key]) return map[key];
+
     return key
       .split('_')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -196,35 +205,47 @@ export default function ResultPage() {
                     </div>
                   </div>
 
-                  {/* Rubric Breakdown */}
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Rubric Breakdown */}
+                    <div className="space-y-3">
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      Rubric Breakdown (Category Scores)
+                        </svg>
+                        Rubric Breakdown
                     </p>
-                    {/* Scores are 0-1, verify scaling logic in aggregator vs display */}
-                    {/* The breakdown values from Aggregator are 0.0-1.0 (normalized score for that component) */}
-                    {/* We should display them as percentages or progress bars? */}
-                    {/* Or just raw values? */}
-                    {/* Let's show as progress bars or percentage. */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(q.breakdown).map(([k, v]) => (
-                        <div
-                          key={k}
-                          className="flex flex-col rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 px-4 py-3 hover:shadow-md transition-all"
-                        >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-slate-700">{formatKey(k)}</span>
-                            <span className="text-sm font-bold text-slate-900">{(v * 100).toFixed(0)}%</span>
-                          </div>
-                          {/* Mini bar */}
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-purple-500" style={{ width: `${v * 100}%` }}></div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {Object.entries(q.breakdown).map(([k, normalizedScore]) => {
+                            // Backend sends normalized score (0-1).
+                            // We need to multiply by the user-defined weight to get the actual points.
+                            // If weight is 0, skip it as per user request.
+                            const weight = q.rubric?.[k] ?? 0;
+                            if (weight === 0) return null;
+
+                            const obtained = normalizedScore * weight;
+
+                            return (
+                                <div
+                                key={k}
+                                className="flex flex-col rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 px-4 py-3 hover:shadow-md transition-all"
+                                >
+                                <div className="flex justify-between items-end mb-2">
+                                    <span className="text-sm font-medium text-slate-700">{formatKey(k)}</span>
+                                    <div className="text-right">
+                                        <div className="text-lg font-bold text-slate-900 leading-none">
+                                            {obtained.toFixed(1)} <span className="text-xs text-slate-400 font-normal">/ {weight}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Mini bar */}
+                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-purple-500 transition-all duration-500" 
+                                        style={{ width: `${normalizedScore * 100}%` }}
+                                    ></div>
+                                </div>
+                                </div>
+                            );
+                        })}
                     </div>
                   </div>
 

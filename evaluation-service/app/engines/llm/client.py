@@ -1,8 +1,12 @@
 import os
 import json
 import requests
+import re
+import time
+import logging
 from typing import Dict, Any, Optional
 
+logger = logging.getLogger(__name__)
 
 class LLMClient:
     OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -10,7 +14,7 @@ class LLMClient:
     def __init__(self, model: str):
         self.model = model
 
-    def send_prompt(self, prompt: str) -> Dict[str, Any]:
+    def send_prompt(self, prompt: str, retries: int = 2) -> Dict[str, Any]:
         api_key = os.getenv("OPENROUTER_API_KEY")
 
         if not api_key:
@@ -21,8 +25,8 @@ class LLMClient:
             "messages": [
                 {"role": "user", "content": prompt}
             ],
-            "temperature": 0,
-            "max_tokens": 300
+            "temperature": 0, # Deterministic output
+            "max_tokens": 500
         }
 
         headers = {
@@ -32,21 +36,55 @@ class LLMClient:
             "X-Title": "Evaluation Service"
         }
 
-        response = requests.post(
-            self.OPENROUTER_API_URL,
-            headers=headers,
-            json=payload,
-            timeout=120  # Increased from 60s to 120s for slower responses
-        )
+        last_error = None
 
-        if response.status_code != 200:
-            raise RuntimeError(
-                f"OpenRouter API Error {response.status_code}: {response.text}"
-            )
+        for attempt in range(retries + 1):
+            try:
+                response = requests.post(
+                    self.OPENROUTER_API_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=120
+                )
 
-        content = response.json()["choices"][0]["message"]["content"]
+                if response.status_code != 200:
+                    error_msg = f"OpenRouter API Error {response.status_code}: {response.text}"
+                    logger.warning(f"Attempt {attempt+1} failed: {error_msg}")
+                    last_error = error_msg
+                    time.sleep(1) # Backoff
+                    continue
 
+                content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                
+                if not content:
+                    raise ValueError("Empty content from LLM")
+
+                return self._parse_json(content)
+
+            except (requests.RequestException, ValueError, RuntimeError) as e:
+                last_error = str(e)
+                logger.warning(f"Attempt {attempt+1} exception: {e}")
+                time.sleep(1)
+        
+        # If all retries fail
+        logger.error(f"All LLM attempts failed. Last error: {last_error}")
+        raise RuntimeError(f"LLM Interaction Failed: {last_error}")
+
+    def _parse_json(self, content: str) -> Dict[str, Any]:
+        """
+        Robustly cleaner and parses JSON from LLM output.
+        Removes markdown code blocks if present.
+        """
+        cleaned = content.strip()
+        
+        # Remove markdown code blocks ```json ... ```
+        # Regex looks for ```json (content) ``` or just ``` (content) ```
+        match = re.search(r"```(?:json)?\s*(.*)\s*```", cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(1).strip()
+        
         try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            raise RuntimeError(f"Invalid JSON from model: {content}")
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON Decode Failed. Content: {content[:500]}...")
+            raise RuntimeError(f"Invalid JSON format from LLM: {str(e)}")

@@ -14,14 +14,11 @@ import EvaluationLoader from "@/components/ui/EvaluationLoader";
 const wait = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-// Default rubric weights (sum = 100)
+// Default rubric weights (sum = 100) - Balanced Mode
 const DEFAULT_RUBRIC: RubricWeight = {
-  conceptual_understanding: 40,
+  conceptual_understanding: 50,
+  completeness_length: 30,
   language_clarity: 20,
-  answer_completeness: 20,
-  spelling_accuracy: 10,
-  handling_incorrect: 5,
-  effort_bonus: 5,
 };
 
 export default function DynamicRubricBuilder() {
@@ -123,7 +120,8 @@ export default function DynamicRubricBuilder() {
               max_marks: 10,
               obtained_marks: result.final_score,
               breakdown: result.rubric_breakdown, // Mapping for UI
-              signals: result.metrics // Mapping for UI
+              signals: result.metrics, // Mapping for UI
+              rubric: q.rubric // Save original weights
           });
           
           overall_max += 10;

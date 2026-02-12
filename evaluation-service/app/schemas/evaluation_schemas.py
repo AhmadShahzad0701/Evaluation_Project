@@ -3,11 +3,8 @@ from typing import Dict, List, Optional
 
 class RubricWeight(BaseModel):
     conceptual_understanding: float
+    completeness_length: float
     language_clarity: float
-    answer_completeness: float
-    spelling_accuracy: float
-    handling_incorrect: float
-    effort_bonus: float
 
 class EvaluationRequest(BaseModel):
     question: str
@@ -17,11 +14,8 @@ class EvaluationRequest(BaseModel):
 
 class RubricBreakdown(BaseModel):
     conceptual_understanding: float
+    completeness_length: float
     language_clarity: float
-    answer_completeness: float
-    spelling_accuracy: float
-    handling_incorrect: float
-    effort_bonus: float
 
 class Metrics(BaseModel):
     llm: float

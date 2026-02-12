@@ -1,10 +1,7 @@
 export type RubricWeight = {
   conceptual_understanding: number;
+  completeness_length: number;
   language_clarity: number;
-  answer_completeness: number;
-  spelling_accuracy: number;
-  handling_incorrect: number;
-  effort_bonus: number;
 };
 
 export type QuestionRubric = {
