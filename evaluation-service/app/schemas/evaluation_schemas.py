@@ -32,8 +32,7 @@ class EvaluationResponse(BaseModel):
     final_score: float
     percentage: float
     grade: str # A|B|C|D|F
+    feedback: str # New field for AI feedback
     rubric_breakdown: RubricBreakdown
     metrics: Metrics
     confidence: float
-
-
