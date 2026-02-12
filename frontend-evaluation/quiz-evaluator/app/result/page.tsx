@@ -7,9 +7,9 @@ type EvaluationResult = {
   question_id: string;
   max_marks: number;
   obtained_marks: number;
-  breakdown: Record<string, number>;
+  breakdown: Record<string, number>; // strict rubric breakdown
   feedback: string;
-  signals?: {
+  signals?: { // diagnostic metrics
     llm?: number;
     nli?: number;
     similarity?: number;
@@ -59,6 +59,13 @@ export default function ResultPage() {
     return "D";
   };
 
+  const formatKey = (key: string) => {
+    return key
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  };
+
   const gradientColor = getGradeColor(Number(percentage));
   const grade = getGrade(Number(percentage));
   const isExcellent = Number(percentage) >= 80;
@@ -80,7 +87,7 @@ export default function ResultPage() {
           <div className="flex items-center justify-between animate-fade-in">
             <div>
               <h1 className="text-4xl font-bold mb-2">Evaluation Results</h1>
-              <p className="text-slate-600">Comprehensive assessment breakdown and feedback</p>
+              <p className="text-slate-600">Strict contract-driven assessment</p>
             </div>
             {isExcellent && (
               <div className="text-4xl animate-bounce">🎉</div>
@@ -101,7 +108,7 @@ export default function ResultPage() {
                       {percentage}%
                     </span>
                     <span className="text-2xl font-semibold text-slate-400">
-                      {data.overall_obtained_marks}/{data.overall_max_marks}
+                      {data.overall_obtained_marks.toFixed(1)}/{data.overall_max_marks}
                     </span>
                   </div>
                 </div>
@@ -114,7 +121,7 @@ export default function ResultPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-slate-700">Performance</span>
-                  <span className="text-slate-600">{data.overall_obtained_marks} pts</span>
+                  <span className="text-slate-600">{data.overall_obtained_marks.toFixed(1)} pts</span>
                 </div>
                 <div className="h-4 rounded-full bg-slate-200 overflow-hidden">
                   <div 
@@ -152,7 +159,7 @@ export default function ResultPage() {
             </h2>
 
             {data.results.map((q, i) => {
-        const questionPercentage = Math.round((q.obtained_marks / q.max_marks) * 100);
+              const questionPercentage = Math.round((q.obtained_marks / q.max_marks) * 100);
               const questionGradient = getColorForScheme(questionPercentage);
 
               return (
@@ -195,16 +202,27 @@ export default function ResultPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
-                      Rubric Breakdown
+                      Rubric Breakdown (Category Scores)
                     </p>
+                    {/* Scores are 0-1, verify scaling logic in aggregator vs display */}
+                    {/* The breakdown values from Aggregator are 0.0-1.0 (normalized score for that component) */}
+                    {/* We should display them as percentages or progress bars? */}
+                    {/* Or just raw values? */}
+                    {/* Let's show as progress bars or percentage. */}
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(q.breakdown).map(([k, v]) => (
                         <div
                           key={k}
-                          className="flex items-center justify-between rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 px-4 py-3 hover:shadow-md transition-all"
+                          className="flex flex-col rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 px-4 py-3 hover:shadow-md transition-all"
                         >
-                          <span className="text-sm font-medium text-slate-700">{k}</span>
-                          <span className="text-sm font-bold text-slate-900">{v}</span>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium text-slate-700">{formatKey(k)}</span>
+                            <span className="text-sm font-bold text-slate-900">{(v * 100).toFixed(0)}%</span>
+                          </div>
+                          {/* Mini bar */}
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-purple-500" style={{ width: `${v * 100}%` }}></div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -223,15 +241,14 @@ export default function ResultPage() {
                     </p>
                   </div>
 
-                  {/* Evaluation Signals */}
+                  {/* Evaluation Signals / Metrics */}
                   {q.signals && (
-                    <div>
-                      <p className="text-sm font-semibold text-slate-700 mb-3">Evaluation Metrics</p>
-                      <div className="grid grid-cols-3 gap-4">
+                    <div className="opacity-75">
+                      <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Diagnostics</p>
+                      <div className="flex gap-4">
                         {Object.entries(q.signals).map(([key, value]) => (
-                          <div key={key} className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200">
-                            <p className="text-xs text-purple-700 uppercase font-semibold mb-1">{key}</p>
-                            <p className="text-lg font-bold text-purple-900">{value ?? "—"}</p>
+                          <div key={key} className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                            <span className="font-mono">{key}:</span> <strong>{value}</strong>
                           </div>
                         ))}
                       </div>
@@ -244,7 +261,7 @@ export default function ResultPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Confidence Score
+                      Confidence Score (Model Certainty)
                     </span>
                     <span className="text-sm font-bold text-green-700">
                       {(q.confidence * 100).toFixed(1)}%

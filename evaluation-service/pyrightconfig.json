@@ -1,0 +1,22 @@
+{
+    "include": ["app", "."],
+    "exclude": ["**/__pycache__"],
+    "ignore": ["**/.git"],
+    "defineConstant": {
+        "DEBUG": true
+    },
+    "reportMissingImports": "warning",
+    "reportMissingTypeStubs": false,
+    "pythonVersion": "3.11",
+    "pythonPlatform": "Windows",
+    "executionEnvironments": [
+        {
+            "root": ".",
+            "extraPaths": [
+                ".",
+                "app",
+                "C:\\Users\\ahmad\\anaconda3\\Lib\\site-packages"
+            ]
+        }
+    ]
+}

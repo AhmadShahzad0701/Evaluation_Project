@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { QuestionRubric } from "@/types/rubric";
+import { QuestionRubric, RubricWeight } from "@/types/rubric";
 import { EvaluationSubmission } from "@/types/submission";
-import { mapToEvaluationRequest } from "@/utils/mapToEvaluationRequest";
+// We don't need mapToEvaluationRequest if we build the payload directly in the loop
 
 import QuestionRubricCard from "./QuestionRubricCard";
 import EvaluationLoader from "@/components/ui/EvaluationLoader";
@@ -13,6 +13,16 @@ import EvaluationLoader from "@/components/ui/EvaluationLoader";
 // ⏱️ helper to ensure loader visibility
 const wait = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+// Default rubric weights (sum = 100)
+const DEFAULT_RUBRIC: RubricWeight = {
+  conceptual_understanding: 40,
+  language_clarity: 20,
+  answer_completeness: 20,
+  spelling_accuracy: 10,
+  handling_incorrect: 5,
+  effort_bonus: 5,
+};
 
 export default function DynamicRubricBuilder() {
   const router = useRouter();
@@ -23,8 +33,7 @@ export default function DynamicRubricBuilder() {
       questionNo: 1,
       questionText: "",
       studentAnswer: "",
-      type: "scheme",
-      schemes: [],
+      rubric: { ...DEFAULT_RUBRIC },
     },
   ]);
 
@@ -37,8 +46,7 @@ export default function DynamicRubricBuilder() {
         questionNo: prev.length + 1,
         questionText: "",
         studentAnswer: "",
-        type: "scheme",
-        schemes: [],
+        rubric: { ...DEFAULT_RUBRIC },
       },
     ]);
   };
@@ -67,78 +75,73 @@ export default function DynamicRubricBuilder() {
         alert(`Question ${q.questionNo}: Student response is required.`);
         return;
       }
-
-      if (q.type === "scheme") {
-        const total =
-          q.schemes?.reduce((sum, s) => sum + s.probability, 0) ?? 0;
-
-        if (total !== 100) {
-          alert(
-            `Question ${q.questionNo}: Marking scheme total must be 100%.`
-          );
+      
+      // Strict 100% check
+      const totalWeight = Object.values(q.rubric).reduce((a, b) => a + b, 0);
+      if (Math.abs(totalWeight - 100) > 0.1) {
+          alert(`Question ${q.questionNo}: Rubric weights must sum exactly to 100. Current: ${totalWeight}`);
           return;
-        }
-      }
-
-      if (q.type === "custom" && !q.customText?.trim()) {
-        alert(`Question ${q.questionNo}: Custom rubric is required.`);
-        return;
       }
     }
 
-    // ---------- FRONTEND PAYLOAD ----------
-    const payload: EvaluationSubmission = {
-      quizTitle,
-      questions: questions.map((q) => ({
-        questionNo: q.questionNo,
-        questionText: q.questionText,
-        studentAnswer: q.studentAnswer,
-        rubricType: q.type,
-        schemes:
-          q.type === "scheme"
-            ? q.schemes?.map((s) => ({
-                label: s.label,
-                probability: s.probability,
-              }))
-            : undefined,
-        customRubric:
-          q.type === "custom" ? q.customText : undefined,
-      })),
-    };
-
-    // ---------- MAP TO BACKEND ----------
-    const evaluationRequest =
-      mapToEvaluationRequest(payload);
-
     try {
       setIsEvaluating(true);
-
-      // ensure loader renders
       await wait(300);
 
-      const response = await fetch(
-        "http://localhost:8000/evaluate/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(evaluationRequest),
-        }
-      );
+      const results = [];
+      let overall_max = 0;
+      let overall_obtained = 0;
 
-      if (!response.ok) {
-        throw new Error("Evaluation failed");
+      // Sequential evaluation to respect strict single-item contract
+      for (const q of questions) {
+          const payload = {
+              question: q.questionText,
+              student_answer: q.studentAnswer,
+              rubric: q.rubric,
+              max_score: 10
+          };
+
+          const response = await fetch(
+            "http://localhost:8000/evaluate/",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Evaluation failed for Question ${q.questionNo}`);
+          }
+
+          const result = await response.json();
+          
+          // Augment result with question metadata for the results page
+          results.push({
+              ...result,
+              question_id: `Q${q.questionNo}`, // Backend might return unknown
+              max_marks: 10,
+              obtained_marks: result.final_score,
+              breakdown: result.rubric_breakdown, // Mapping for UI
+              signals: result.metrics // Mapping for UI
+          });
+          
+          overall_max += 10;
+          overall_obtained += result.final_score;
       }
 
-      const evaluationResult = await response.json();
+      const finalResponse = {
+          results,
+          overall_max_marks: overall_max,
+          overall_obtained_marks: parseFloat(overall_obtained.toFixed(2))
+      };
 
       localStorage.setItem(
         "evaluationResult",
-        JSON.stringify(evaluationResult)
+        JSON.stringify(finalResponse)
       );
 
-      // UX guarantee: loader visible
       await wait(800);
-
       router.push("/result");
     } catch (error) {
       console.error(error);
@@ -148,7 +151,7 @@ export default function DynamicRubricBuilder() {
     }
   };
 
-  // ✅ JSX RENDER (OUTSIDE handleSubmit)
+  // ✅ JSX RENDER
   return (
     <div className="relative space-y-8">
       {/* Quiz Title */}

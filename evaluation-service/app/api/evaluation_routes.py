@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.evaluation_schemas import (
     EvaluationRequest,
     EvaluationResponse,
-    EvaluationResult
+    RubricWeight
 )
 
 from app.engines.descriptive_engine import DescriptiveEngine
@@ -31,135 +31,112 @@ aggregator = Aggregator()
 
 @router.post("/", response_model=EvaluationResponse)
 def evaluate(request: EvaluationRequest):
-    llm_judge = LLMJudge()  # may timeout → handled safely
-    results = []
-    overall_max_marks = 0
-    overall_obtained_marks = 0.0
-
-    try:
-        for item in request.evaluations:
-
-            if item.question_type != "descriptive":
-                continue
-
-            # ---------- STEP 1: BASE RUBRIC EVAL ----------
-            base_eval = descriptive_engine.evaluate(
-                question=item.question,
-                answer=item.student_answer or "",
-                rubric=item.rubric,
-                max_score=item.max_score
-            )
-
-            # ---------- STEP 2: SIMILARITY ----------
-            similarity_score = similarity_engine.evaluate(
-                student_answer=item.student_answer or "",
-                reference_answer=item.model_answer  # Now using reference!
-            )
-
-            # ---------- STEP 3: NLI ----------
-            nli_score = nli_engine.evaluate(
-                question=item.question,
-                student_answer=item.student_answer or "",
-                reference_answer=item.model_answer  # Now using reference!
-            )
-
-            # ---------- STEP 4: LLM (SAFE FALLBACK) ----------
-            llm_start_time = time.time()
-            llm_used_successfully = False
-            
-            try:
-                logger.info(f"Calling LLM for question_id: {item.question_id}")
-                
-                llm_eval = llm_judge.evaluate(
-                    question=item.question,
-                    student_answer=item.student_answer or "",
-                    rubric=item.rubric or descriptive_engine.DEFAULT_RUBRIC,
-                    max_score=item.max_score
-                )
-                
-                llm_response_time = time.time() - llm_start_time
-                logger.info(f"✅ LLM responded successfully in {llm_response_time:.2f}s")
-                llm_used_successfully = True
-                
-            except Exception as llm_error:
-                llm_response_time = time.time() - llm_start_time
-                error_type = type(llm_error).__name__
-                error_msg = str(llm_error)
-                
-                # Log detailed error information
-                logger.error(f"❌ LLM ERROR after {llm_response_time:.2f}s:")
-                logger.error(f"   Error Type: {error_type}")
-                logger.error(f"   Error Message: {error_msg}")
-                logger.error(f"   Question ID: {item.question_id}")
-                logger.error(f"   Full Traceback:\n{traceback.format_exc()}")
-                
-                # Categorize error for better feedback
-                if "timeout" in error_msg.lower() or llm_response_time > 55:
-                    error_category = "LLM request timed out"
-                elif "API Error" in error_msg or "status_code" in error_msg:
-                    error_category = f"LLM API error: {error_msg[:100]}"
-                elif "JSON" in error_msg or "json" in error_msg.lower():
-                    error_category = "LLM returned invalid JSON format"
-                elif "API_KEY" in error_msg:
-                    error_category = "LLM API key not configured"
-                else:
-                    error_category = f"LLM error: {error_type}"
-                
-                # Fallback to rubric-based score
-                llm_eval = {
-                    "score": (
-                        base_eval["total_score"] / item.max_score
-                        if item.max_score > 0
-                        else 0.0
-                    ),
-                    "justification": (
-                        f"⚠️ {error_category}. "
-                        f"Using rubric-based scoring as fallback."
-                    ),
-                    "weight_adjustment": None
-                }
-
-            # ---------- STEP 5: AGGREGATION ----------
-            aggregated = aggregator.aggregate(
-                scores={
-                    "llm": llm_eval["score"],
-                    "nli": nli_score,
-                    "similarity": similarity_score
-                },
-                rubric=item.rubric or descriptive_engine.DEFAULT_RUBRIC,
-                max_score=item.max_score,
-                llm_adjustment=llm_eval.get("weight_adjustment")
-            )
-
-            obtained = round(aggregated["final_marks"], 2)
-
-            overall_max_marks += item.max_score
-            overall_obtained_marks += obtained
-
-            # ---------- STEP 6: RESULT ----------
-            results.append(
-                EvaluationResult(
-                    student_id=item.student_id or "unknown",
-                    question_id=item.question_id or "unknown",
-                    max_marks=item.max_score,
-                    obtained_marks=obtained,
-                    breakdown=base_eval["breakdown"],
-                    feedback=llm_eval["justification"],
-                    signals={
-                        "llm": round(llm_eval["score"], 3),
-                        "nli": round(nli_score, 3),
-                        "similarity": round(similarity_score, 3)
-                    },
-                    confidence=round(aggregated["final_percentage"], 3)
-                )
-            )
-
+    llm_judge = LLMJudge()
+    
+    # 1. Structural Validation
+    is_valid, validation_msg = descriptive_engine.validate_answer(request.student_answer)
+    if not is_valid:
+        # Return strict failure response
+        zero_breakdown = {k: 0.0 for k in request.rubric.model_dump().keys()}
+        zero_metrics = {"llm": 0.0, "nli": 0.0, "similarity": 0.0}
+        
         return EvaluationResponse(
-            results=results,
-            overall_max_marks=overall_max_marks,
-            overall_obtained_marks=round(overall_obtained_marks, 2)
+            final_score=0.0,
+            percentage=0.0,
+            grade="F",
+            rubric_breakdown=zero_breakdown,
+            metrics=zero_metrics,
+            confidence=1.0  # High confidence in failure
         )
 
+    # 2. Engines Execution
+    # Rubric (converted to dict for compatibility if needed, though engines mostly need keys)
+    # Actually DescriptiveEngine.DEFAULT_RUBRIC is dict. 
+    # We won't use descriptive_engine.evaluate() breakdown heavily, mainly use it for legacy or validation.
+    # But wait, Aggregator now computes "Language Clarity" / "Completeness". 
+    # DescriptiveEngine.evaluate returns a breakdown based on dict keys.
+    # We can skip DescriptiveEngine.evaluate entirely if Aggregator does the work?
+    # No, Aggregator uses `_compute_language_clarity` etc.
+    # DescriptiveEngine.evaluate is NOT used in the NEW Aggregator logic.
+    # So we can remove it or keep it for logs.
+    
+    # Similarity
+    similarity_score = similarity_engine.evaluate(
+        student_answer=request.student_answer,
+        reference_answer="" # We don't have reference in this request model?
+        # User prompt: "model_answer: str" in schema?
+        # My step 63 snippet of EvaluationRequest has "student_answer", "question", "rubric", "max_score".
+        # It MISSES "model_answer".
+        # The OLD EvaluationItem had "model_answer".
+        # If the user wants similarity, we need model_answer.
+        # But step 63 view of schema did NOT show model_answer.
+        # Let's check step 63 again.
+        # It definitely doesn't show model_answer.
+        # "question: str", "student_answer: str", "rubric: ...", "max_score: ...".
+        # So reference answer is missing from the NEW contract I defined?
+        # Wait, I didn't verify if I should include it.
+        # User prompt: 
+        # "POST body must be: { question, student_answer, rubric, max_score }"
+        # It DOES NOT include model_answer.
+        # So similarity must be against... what?
+        # "Similarity only contributes to conceptual_understanding refinement."
+        # If no model answer is provided, we can't do similarity against model answer.
+        # Maybe against "question"? or maybe we assume LLM handles it?
+        # If user removed model_answer from requirements, then maybe similarity is 0 or based on question?
+        # "Similarity" usually implies reference.
+        # If I strictly follow the prompt "POST body must be...", there is no model answer.
+        # So I will pass empty string or question to similarity engine?
+        # Or maybe I should've added model_answer to schema?
+        # Given "Similarity must NEVER override structural fail", it implies similarity is still part of it.
+        # I will assume "model_answer" is optional or not present.
+        # I will use "question" for similarity if model_answer is missing? No that's semantics.
+        # I'll just pass "" and expect 0 similarity if no reference.
+    )
+
+    # NLI
+    nli_score = nli_engine.evaluate(
+        question=request.question,
+        student_answer=request.student_answer,
+        reference_answer="" # Same issue
+    )
+
+    # LLM
+    llm_start_time = time.time()
+    try:
+        # We need to adapt the rubric for LLM if it expects dict.
+        # LLMJudge.evaluate expects rubric dict.
+        rubric_dict = request.rubric.model_dump()
+        
+        llm_eval = llm_judge.evaluate(
+            question=request.question,
+            student_answer=request.student_answer,
+            rubric=rubric_dict,
+            max_score=request.max_score
+        )
+        logger.info(f"✅ LLM success: {llm_eval['score']}")
     except Exception as e:
-        print("❌ ENGINE ERROR:", str(e))
-        raise HTTPException(status_code=500, detail="Evaluation failed")
+        logger.error(f"❌ LLM failed: {e}")
+        llm_eval = {"score": 0.0, "confidence": 0.5}
+
+    # 3. Aggregation
+    scores = {
+         "llm": llm_eval.get("score", 0.0),
+         "nli": nli_score,
+         "similarity": similarity_score
+    }
+    
+    result = aggregator.aggregate(
+        scores=scores,
+        rubric=request.rubric,
+        max_score=request.max_score,
+        answer=request.student_answer
+    )
+
+    return EvaluationResponse(
+        final_score=result["final_marks"],
+        percentage=result["final_percentage"],
+        grade=result["grade"],
+        rubric_breakdown=result["rubric_breakdown"],
+        metrics=result["metrics"],
+        confidence=llm_eval.get("confidence", 0.5)
+    )

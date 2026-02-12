@@ -1,8 +1,7 @@
 "use client";
 
-import { QuestionRubric, MarkingScheme } from "@/types/rubric";
-import MarkingSchemeEditor from "./MarkingSchemeEditor";
-import CustomRubricEditor from "./CustomRubricEditor";
+import { QuestionRubric, RubricWeight } from "@/types/rubric";
+import RubricWeightEditor from "./RubricWeightEditor";
 
 type Props = {
   data: QuestionRubric;
@@ -25,7 +24,7 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
             Question {data.questionNo}
           </h3>
         </div>
-        <span className="badge-gradient">Required</span>
+        <span className="badge-gradient">Strict Mode</span>
       </div>
 
       {/* Question Text */}
@@ -60,65 +59,12 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
         />
       </div>
 
-      {/* Rubric Type Selector - Modern Tab Style */}
-      <div className="space-y-3">
-        <label className="text-sm font-semibold text-slate-700">Evaluation Method</label>
-        <div className="inline-flex rounded-xl border-2 border-slate-200 bg-slate-50 p-1.5 gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                ...data,
-                type: "scheme",
-                customText: undefined,
-              })
-            }
-            className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
-              ${
-                data.type === "scheme"
-                  ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-105"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white"
-              }`}
-          >
-            📊 Marking Scheme
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                ...data,
-                type: "custom",
-                schemes: undefined,
-              })
-            }
-            className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
-              ${
-                data.type === "custom"
-                  ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-105"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white"
-              }`}
-          >
-            ✍️ Custom Rubric
-          </button>
-        </div>
-      </div>
-
-      {/* Rubric Editor */}
-      <div className="pt-4">
-        {data.type === "scheme" ? (
-          <MarkingSchemeEditor
-            schemes={data.schemes || []}
-            onChange={(schemes: MarkingScheme[]) =>
-              onChange({ ...data, schemes })
-            }
-          />
-        ) : (
-          <CustomRubricEditor
-            value={data.customText || ""}
-            onChange={(text: string) => onChange({ ...data, customText: text })}
-          />
-        )}
+      {/* Rubric Weights */}
+      <div className="pt-2">
+        <RubricWeightEditor
+            value={data.rubric}
+            onChange={(rubric: RubricWeight) => onChange({ ...data, rubric })}
+        />
       </div>
     </div>
   );

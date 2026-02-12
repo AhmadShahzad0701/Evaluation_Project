@@ -1,5 +1,5 @@
-from .client import LLMClient
-from .prompts import EVALUATION_PROMPT
+from app.engines.llm.client import LLMClient
+from app.engines.llm.prompts import EVALUATION_PROMPT
 
 
 class LLMJudge:
@@ -29,11 +29,21 @@ class LLMJudge:
 
         parsed = self.client.send_prompt(prompt)
 
-        raw_score = float(parsed.get("score", max_score / 2))
-        normalized_score = max(0.0, min(raw_score / max_score, 1.0))
+        # Extract component scores (default to 0.0 if missing)
+        conceptual = float(parsed.get("conceptual_understanding", 0.0))
+        clarity = float(parsed.get("language_clarity", 0.0))
+        handling = float(parsed.get("handling_incorrect", 0.0))
+        confidence = float(parsed.get("confidence", 0.5))
+
+        # Clamp values 0.0 - 1.0
+        conceptual = max(0.0, min(conceptual, 1.0))
+        clarity = max(0.0, min(clarity, 1.0))
+        handling = max(0.0, min(handling, 1.0))
 
         return {
-            "score": normalized_score,
-            "justification": parsed.get("justification", ""),
-            "weight_adjustment": parsed.get("weight_adjustment", {})
+            "conceptual_understanding": conceptual,
+            "language_clarity": clarity,
+            "handling_incorrect": handling,
+            "feedback": parsed.get("feedback", "No feedback provided."),
+            "confidence": confidence
         }

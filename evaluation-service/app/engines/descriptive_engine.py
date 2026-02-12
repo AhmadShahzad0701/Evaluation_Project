@@ -43,13 +43,46 @@ class DescriptiveEngine:
         
         return key_terms
     
+    def validate_answer(self, answer: str) -> tuple[bool, str]:
+        """
+        Strict structural validation of the answer.
+        Returns (is_valid, reason)
+        """
+        if not answer or not answer.strip():
+            return False, "Answer is empty"
+            
+        # 1. Check word count (Rule: < 3 meaningful words = 0)
+        # We'll rely on a simple split for now, but "meaningful" implies ignoring stopwords.
+        # For strictness, let's just count total words first.
+        words = answer.strip().split()
+        if len(words) < 3:
+            # Exception: "Complete and correct concept"
+            # Since we can't easily judge "correct concept" without semantic analysis,
+            # we will rely on a very strict length check for now as requested by user pseudo-code:
+            # if word_count < 3: return 0.0
+            return False, "Answer is too short (less than 3 words)"
+            
+        # 2. Check for fragments (heuristic: ends with typical sentence enders? 
+        # No, that might be too strict for bullet points. 
+        # But "fragmented" or "partial word" is mentioned).
+        # We can check if the last word looks complete. 
+        # For now, we'll assume the LLM or further checks handle subtle fragments, 
+        # but the length check covers "Artif".
+        
+        return True, ""
+
     def _is_unattempted_or_wrong(self, answer: str, question: str) -> tuple[bool, str]:
         """
-        Detect if answer is unattempted or completely wrong.
+        Detect if answer is unattempted, completely wrong, or invalid.
         
         Returns:
             (is_wrong, reason) tuple
         """
+        # strict validation first
+        is_valid, reason = self.validate_answer(answer)
+        if not is_valid:
+            return True, reason
+
         answer_lower = answer.lower().strip()
         
         # Common "I don't know" phrases
@@ -86,7 +119,7 @@ class DescriptiveEngine:
 
     
     def _score_conceptual_understanding(
-        self, 
+        self: "DescriptiveEngine", 
         question: str, 
         answer: str, 
         max_points: int
@@ -145,7 +178,7 @@ class DescriptiveEngine:
             else:
                 return int(max_points * 0.30)
     
-    def _score_clarity(self, answer: str, max_points: int) -> int:
+    def _score_clarity(self: "DescriptiveEngine", answer: str, max_points: int) -> int:
         """
         Score based on answer structure and clarity.
         Considers length, sentence count, and word diversity.
@@ -171,7 +204,7 @@ class DescriptiveEngine:
         else:
             return int(max_points * 0.6)
     
-    def _score_completeness(self, answer: str, max_points: int) -> int:
+    def _score_completeness(self: "DescriptiveEngine", answer: str, max_points: int) -> int:
         """
         Score based on answer completeness.
         Considers length and detail level.
@@ -190,90 +223,36 @@ class DescriptiveEngine:
         else:
             return int(max_points * 0.3)
     
-    def evaluate(
-        self,
-        question: str,
-        answer: str,
-        rubric: Optional[Dict[str, int]],
-        max_score: int
-    ) -> Dict[str, Any]:
+    def evaluate_components(self, answer: str) -> dict:
         """
-        Evaluate a descriptive answer based on rubric criteria.
-        
-        Returns:
-            dict with total_score, breakdown, feedback, and confidence
+        Returns component scores (0.0 to 1.0) for:
+        - answer_completeness
+        - effort_bonus
         """
-        # Type check to resolve inference issues
-        assert isinstance(self, DescriptiveEngine), "self must be DescriptiveEngine"
-        
-        # Handle empty answers
-        if not answer or answer.strip() == "":
-            active_rubric = rubric if rubric else self.DEFAULT_RUBRIC
-            breakdown = {}
-            for key, weight in active_rubric.items():
-                breakdown[key] = 0
-            return {
-                "total_score": 0,
-                "breakdown": breakdown,
-                "feedback": "No answer was submitted.",
-                "confidence": 0.0
-            }
-        
-        # Check for "I don't know" or completely wrong answers
-        is_wrong, wrong_reason = self._is_unattempted_or_wrong(answer, question)
-        if is_wrong:
-            active_rubric = rubric if rubric else self.DEFAULT_RUBRIC
-            breakdown = {}
-            for key, weight in active_rubric.items():
-                breakdown[key] = 0
-            return {
-                "total_score": 0,
-                "breakdown": breakdown,
-                "feedback": f"⚠️ {wrong_reason}. Score: 0/{max_score}",
-                "confidence": 0.95  # High confidence in detecting wrong answers
-            }
-        
-        active_rubric = rubric if rubric else self.DEFAULT_RUBRIC
-        breakdown = {}
-        total = 0
-        
-        # Score each rubric criterion
-        for key, weight in active_rubric.items():
-            key_lower = key.lower()
+        if not answer or not answer.strip():
+            return {"answer_completeness": 0.0, "effort_bonus": 0.0}
             
-            # Match rubric criteria to scoring functions
-            if "concept" in key_lower or "understanding" in key_lower:
-                score = self._score_conceptual_understanding(
-                    question, answer, weight
-                )
-            elif "clarity" in key_lower or "language" in key_lower or "grammar" in key_lower:
-                score = self._score_clarity(answer, weight)
-            elif "complete" in key_lower or "coverage" in key_lower:
-                score = self._score_completeness(answer, weight)
-            else:
-                # Generic scoring for unknown criteria
-                score = int(weight * 0.7)
-            
-            breakdown[key] = score
-            total += score
-        
-        # Ensure total doesn't exceed max_score
-        total = min(total, max_score)
-        
-        # Calculate confidence based on answer quality
-        assert isinstance(answer, str), "answer should be a string at this point"
         word_count = len(answer.split())
-        if word_count >= 15:
-            confidence = 0.75
-        elif word_count >= 10:
-            confidence = 0.65
-        else:
-            confidence = 0.50
         
+        # 1. Answer Completeness (normalized 0.0 to 1.0)
+        if word_count >= 20: completeness = 1.0
+        elif word_count >= 15: completeness = 0.9
+        elif word_count >= 10: completeness = 0.7
+        elif word_count >= 5: completeness = 0.5
+        else: completeness = 0.3
+        
+        # 2. Effort Bonus (normalized 0.0 to 1.0)
+        # Heuristic: Usage of formatting? Bullet points? 
+        # Or just length > 30?
+        # Let's say: structured answer (bullet points) gets bonus.
+        effort = 0.0
+        if "-" in answer or "*" in answer or "\n" in answer:
+            effort = 0.5
+        if word_count > 30:
+            effort = 1.0
+            
         return {
-            "total_score": total,
-            "breakdown": breakdown,
-            "feedback": f"Answer evaluated using rubric-based scoring. Word count: {word_count}",
-            "confidence": confidence
+            "answer_completeness": completeness,
+            "effort_bonus": effort
         }
 
