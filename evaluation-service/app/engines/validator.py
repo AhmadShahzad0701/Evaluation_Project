@@ -15,8 +15,15 @@ class Validator:
 
     def validate(self, answer: str) -> Tuple[bool, str]:
         """
-        Validates the answer based on strict structural rules.
-        Returns: (is_valid, reason)
+        Legacy validation (defaults to strict).
+        """
+        return self.validate_adaptive(answer, total_marks=10.0)
+
+    def validate_adaptive(self, answer: str, total_marks: float) -> Tuple[bool, str]:
+        """
+        Adaptive validation based on total_marks.
+        - If marks <= 2: Allow 1+ meaningful words.
+        - If marks > 2: Require 3+ meaningful words.
         """
         if not answer or not answer.strip():
             return False, "Answer is empty"
@@ -24,17 +31,19 @@ class Validator:
         cleaned_answer = answer.strip()
         words = cleaned_answer.split()
         
-        # 1. Meaningful Word Count Check
-        if not self._has_enough_meaningful_words(words, min_words=3):
-            return False, f"Answer is too short. Minimum 3 meaningful words required."
-
-        # 2. Spam / Repetition Check
+        # 1. Spam / Repetition Check (Always active)
         if self._is_spam(words):
              return False, "Answer detected as spam (excessive repetition)."
 
-        # 3. Gibberish Check (Basic heuristic)
+        # 2. Gibberish Check (Always active)
         if self._is_gibberish(words):
             return False, "Answer appears to be gibberish or non-sensical."
+
+        # 3. Meaningful Word Count Check (Relaxed)
+        # We allow short answers to pass to the scoring engine (where they get low completeness).
+        # We only reject if it's practically empty (< 1 meaningful word).
+        if not self._has_enough_meaningful_words(words, min_words=1):
+            return False, "Answer is too short (less than 1 meaningful word)."
 
         return True, ""
 

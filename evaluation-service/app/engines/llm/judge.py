@@ -1,5 +1,5 @@
 from app.engines.llm.client import LLMClient
-from app.engines.llm.prompts import EVALUATION_PROMPT
+from app.engines.llm.prompts import EVALUATION_PROMPT, ADAPTIVE_EVALUATION_PROMPT
 
 
 class LLMJudge:
@@ -46,4 +46,44 @@ class LLMJudge:
             "handling_incorrect": handling,
             "feedback": parsed.get("feedback", "No feedback provided."),
             "confidence": confidence
+        }
+
+    def _build_adaptive_prompt(self, question, student_answer, rubric_weights, total_marks, style, signals):
+        # Format rubric weights for display
+        rubric_lines = "\n".join([f"- {k}: {v}" for k, v in rubric_weights.items()])
+        
+        # Unpack signals
+        sim_val = signals.get("similarity", 0.0)
+        nli_val = signals.get("nli", 0.0)
+        depth_val = signals.get("depth", {}).get("depth_score", 0.0)
+
+        return ADAPTIVE_EVALUATION_PROMPT.format(
+            question=question,
+            student_answer=student_answer,
+            rubric_weights=rubric_lines,
+            total_marks=total_marks,
+            style=style,
+            sim_score=sim_val,
+            nli_score=nli_val,
+            depth_score=depth_val
+        )
+
+    def evaluate_adaptive(self, question, student_answer, rubric_weights, total_marks, style, signals):
+        prompt = self._build_adaptive_prompt(
+            question, student_answer, rubric_weights, total_marks, style, signals
+        )
+        
+        parsed = self.client.send_prompt(prompt)
+        
+        # Extract new keys
+        concept = float(parsed.get("concept", 0.0))
+        completeness = float(parsed.get("completeness", 0.0))
+        clarity = float(parsed.get("clarity", 0.0))
+        
+        return {
+            "concept": max(0.0, min(concept, 1.0)),
+            "completeness": max(0.0, min(completeness, 1.0)),
+            "clarity": max(0.0, min(clarity, 1.0)),
+            "feedback": parsed.get("feedback", "No feedback provided."),
+            "confidence": 1.0 # Placeholder for now
         }
