@@ -26,27 +26,29 @@ export default function DynamicRubricBuilder() {
 
   const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<QuestionRubric[]>([
-    {
-      questionNo: 1,
-      questionText: "",
-      studentAnswer: "",
-      rubric: { ...DEFAULT_RUBRIC },
-    },
-  ]);
-
-  const [isEvaluating, setIsEvaluating] = useState(false);
-
-  const addQuestion = () => {
-    setQuestions((prev) => [
-      ...prev,
       {
-        questionNo: prev.length + 1,
-        questionText: "",
-        studentAnswer: "",
-        rubric: { ...DEFAULT_RUBRIC },
-      },
-    ]);
-  };
+       questionNo: 1,
+       questionText: "",
+       studentAnswer: "",
+       max_marks: 10,
+       rubric: { ...DEFAULT_RUBRIC },
+     },
+   ]);
+ 
+   const [isEvaluating, setIsEvaluating] = useState(false);
+ 
+   const addQuestion = () => {
+     setQuestions((prev) => [
+       ...prev,
+       {
+         questionNo: prev.length + 1,
+         questionText: "",
+         studentAnswer: "",
+         max_marks: 10,
+         rubric: { ...DEFAULT_RUBRIC },
+       },
+     ]);
+   };
 
   const updateQuestion = (index: number, updated: QuestionRubric) => {
     setQuestions((prev) =>
@@ -95,7 +97,7 @@ export default function DynamicRubricBuilder() {
               question: q.questionText,
               student_answer: q.studentAnswer,
               rubric: q.rubric,
-              max_score: 10
+              max_score: q.max_marks
           };
 
           const response = await fetch(
@@ -117,14 +119,14 @@ export default function DynamicRubricBuilder() {
           results.push({
               ...result,
               question_id: `Q${q.questionNo}`, // Backend might return unknown
-              max_marks: 10,
+              max_marks: q.max_marks,
               obtained_marks: result.final_score,
               breakdown: result.rubric_breakdown, // Mapping for UI
               signals: result.metrics, // Mapping for UI
               rubric: q.rubric // Save original weights
           });
           
-          overall_max += 10;
+          overall_max += q.max_marks;
           overall_obtained += result.final_score;
       }
 

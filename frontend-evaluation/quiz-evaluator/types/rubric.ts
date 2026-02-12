@@ -8,5 +8,6 @@ export type QuestionRubric = {
   questionNo: number;
   questionText: string;
   studentAnswer: string;
+  max_marks: number;
   rubric: RubricWeight;
 };

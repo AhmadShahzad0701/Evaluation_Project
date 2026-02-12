@@ -24,6 +24,18 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
             Question {data.questionNo}
           </h3>
         </div>
+        
+        <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total Marks</label>
+            <input
+                type="number"
+                min="1"
+                max="100"
+                value={data.max_marks || 10}
+                onChange={(e) => onChange({ ...data, max_marks: Math.max(1, parseInt(e.target.value) || 0) })}
+                className="w-16 text-center font-bold text-slate-800 bg-transparent outline-none border-l border-slate-200 pl-2 focus:text-purple-600"
+            />
+        </div>
         </div>
 
 
