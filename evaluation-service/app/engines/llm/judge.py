@@ -22,12 +22,12 @@ class LLMJudge:
             max_score=max_score
         )
 
-    def evaluate(self, question, student_answer, rubric, max_score):
+    async def evaluate(self, question, student_answer, rubric, max_score):
         prompt = self._build_prompt(
             question, student_answer, rubric, max_score
         )
 
-        parsed = self.client.send_prompt(prompt)
+        parsed = await self.client.send_prompt(prompt)
 
         # Extract component scores (default to 0.0 if missing)
         conceptual = float(parsed.get("conceptual_understanding", 0.0))
@@ -68,12 +68,12 @@ class LLMJudge:
             depth_score=depth_val
         )
 
-    def evaluate_adaptive(self, question, student_answer, rubric_weights, total_marks, style, signals):
+    async def evaluate_adaptive(self, question, student_answer, rubric_weights, total_marks, style, signals):
         prompt = self._build_adaptive_prompt(
             question, student_answer, rubric_weights, total_marks, style, signals
         )
         
-        parsed = self.client.send_prompt(prompt)
+        parsed = await self.client.send_prompt(prompt)
         
         # Extract new keys
         concept = float(parsed.get("concept", 0.0))

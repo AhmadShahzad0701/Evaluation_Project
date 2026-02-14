@@ -35,7 +35,7 @@ class EvaluationService:
         self.descriptive_engine = DescriptiveEngine()
         self.depth_estimator = DepthEstimator()
 
-    def evaluate_student_answer(self, request: EvaluationRequest) -> EvaluationResponse:
+    async def evaluate_student_answer(self, request: EvaluationRequest) -> EvaluationResponse:
         """
         Orchestrates the entire evaluation pipeline.
         """
@@ -68,7 +68,7 @@ class EvaluationService:
         # 3. Layer 3: LLM Reasoning
         # Pass everything to LLM
         try:
-            llm_result = self.llm_judge.evaluate_adaptive(
+            llm_result = await self.llm_judge.evaluate_adaptive(
                 question=request.question,
                 student_answer=request.student_answer,
                 rubric_weights=normalized_rubric,

@@ -1,9 +1,10 @@
 import os
 import json
-import requests
+import httpx
 import re
 import time
 import logging
+import asyncio
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ class LLMClient:
     def __init__(self, model: str):
         self.model = model
 
-    def send_prompt(self, prompt: str, retries: int = 2) -> Dict[str, Any]:
+    async def send_prompt(self, prompt: str, retries: int = 1) -> Dict[str, Any]:
         api_key = os.getenv("OPENROUTER_API_KEY")
 
         if not api_key:
@@ -38,33 +39,34 @@ class LLMClient:
 
         last_error = None
 
-        for attempt in range(retries + 1):
-            try:
-                response = requests.post(
-                    self.OPENROUTER_API_URL,
-                    headers=headers,
-                    json=payload,
-                    timeout=120
-                )
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            for attempt in range(retries + 1):
+                try:
+                    response = await client.post(
+                        self.OPENROUTER_API_URL,
+                        headers=headers,
+                        json=payload
+                    )
 
-                if response.status_code != 200:
-                    error_msg = f"OpenRouter API Error {response.status_code}: {response.text}"
-                    logger.warning(f"Attempt {attempt+1} failed: {error_msg}")
-                    last_error = error_msg
-                    time.sleep(1) # Backoff
-                    continue
+                    if response.status_code != 200:
+                        error_msg = f"OpenRouter API Error {response.status_code}: {response.text}"
+                        logger.warning(f"Attempt {attempt+1} failed: {error_msg}")
+                        last_error = error_msg
+                        await asyncio.sleep(1) # Backoff
+                        continue
 
-                content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-                
-                if not content:
-                    raise ValueError("Empty content from LLM")
+                    data = response.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    
+                    if not content:
+                        raise ValueError("Empty content from LLM")
 
-                return self._parse_json(content)
+                    return self._parse_json(content)
 
-            except (requests.RequestException, ValueError, RuntimeError) as e:
-                last_error = str(e)
-                logger.warning(f"Attempt {attempt+1} exception: {e}")
-                time.sleep(1)
+                except (httpx.RequestError, ValueError, RuntimeError) as e:
+                    last_error = str(e)
+                    logger.warning(f"Attempt {attempt+1} exception: {e}")
+                    await asyncio.sleep(1)
         
         # If all retries fail
         logger.error(f"All LLM attempts failed. Last error: {last_error}")

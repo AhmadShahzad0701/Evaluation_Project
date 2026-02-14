@@ -85,6 +85,12 @@ export default function DynamicRubricBuilder() {
 
     try {
       setIsEvaluating(true);
+      
+      // Feedback for slow responses
+      const slowTimer = setTimeout(() => {
+          alert("Evaluation is taking longer than usual (LLM processing). Please wait...");
+      }, 45000); // 45s warning
+
       await wait(300);
 
       const results = [];
@@ -100,35 +106,51 @@ export default function DynamicRubricBuilder() {
               max_score: q.max_marks
           };
 
-          const response = await fetch(
-            "http://localhost:8000/evaluate/",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+
+          try {
+            const response = await fetch(
+                "http://localhost:8000/evaluate/",
+                {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+                }
+            );
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Evaluation failed for Question ${q.questionNo}: ${errText}`);
             }
-          );
 
-          if (!response.ok) {
-            throw new Error(`Evaluation failed for Question ${q.questionNo}`);
+            const result = await response.json();
+            
+            // Augment result with question metadata for the results page
+            results.push({
+                ...result,
+                question_id: `Q${q.questionNo}`, // Backend might return unknown
+                max_marks: q.max_marks,
+                obtained_marks: result.final_score,
+                breakdown: result.rubric_breakdown, // Mapping for UI
+                signals: result.metrics, // Mapping for UI
+                rubric: q.rubric // Save original weights
+            });
+            
+            overall_max += q.max_marks;
+            overall_obtained += result.final_score;
+
+          } catch (e: any) {
+              if (e.name === 'AbortError') {
+                  throw new Error(`Timeout: Question ${q.questionNo} took too long to evaluate.`);
+              }
+              throw e;
           }
-
-          const result = await response.json();
-          
-          // Augment result with question metadata for the results page
-          results.push({
-              ...result,
-              question_id: `Q${q.questionNo}`, // Backend might return unknown
-              max_marks: q.max_marks,
-              obtained_marks: result.final_score,
-              breakdown: result.rubric_breakdown, // Mapping for UI
-              signals: result.metrics, // Mapping for UI
-              rubric: q.rubric // Save original weights
-          });
-          
-          overall_max += q.max_marks;
-          overall_obtained += result.final_score;
       }
+
+      clearTimeout(slowTimer);
 
       const finalResponse = {
           results,
@@ -143,9 +165,9 @@ export default function DynamicRubricBuilder() {
 
       await wait(800);
       router.push("/result");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Error while evaluating answers.");
+      alert(error.message || "Error while evaluating answers.");
     } finally {
       setIsEvaluating(false);
     }

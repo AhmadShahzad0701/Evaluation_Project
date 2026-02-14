@@ -16,7 +16,7 @@ router = APIRouter()
 evaluation_service = EvaluationService()
 
 @router.post("/", response_model=EvaluationResponse)
-def evaluate(request: EvaluationRequest):
+async def evaluate(request: EvaluationRequest):
     """
     Strict Contract-Driven Evaluation Pipeline.
     Delegates all logic to EvaluationService.
@@ -24,7 +24,7 @@ def evaluate(request: EvaluationRequest):
     try:
         logger.info(f"Received evaluation request for Q: {request.question[:30]}...")
         
-        response = evaluation_service.evaluate_student_answer(request)
+        response = await evaluation_service.evaluate_student_answer(request)
         
         logger.info(f"Evaluation complete. Score: {response.final_score}, Grade: {response.grade}")
         return response
