@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { QuestionRubric, RubricWeight } from "@/types/rubric";
 import RubricWeightEditor from "./RubricWeightEditor";
 
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export default function QuestionRubricCard({ data, onChange }: Props) {
+  const [showReference, setShowReference] = useState(false);
+
   return (
     <div className="premium-card relative overflow-hidden p-8 space-y-6">
       {/* Gradient Accent Border */}
@@ -69,6 +72,36 @@ export default function QuestionRubricCard({ data, onChange }: Props) {
           placeholder="Student answer will appear here..."
           className="textarea-modern"
         />
+      </div>
+
+      {/* Teacher Reference Answer (Optional) */}
+      <div className="space-y-2">
+        <button
+          onClick={() => setShowReference(!showReference)}
+          className="text-sm font-medium text-purple-600 hover:text-purple-700 focus:outline-none focus:underline flex items-center gap-1 transition-colors"
+          type="button"
+          aria-expanded={showReference}
+        >
+          <span>{showReference ? "−" : "+"}</span>
+          Add Teacher Reference Answer (Optional)
+        </button>
+        
+        {showReference && (
+          <div className="animate-fade-in space-y-1">
+            <label className="text-sm font-semibold text-slate-700 block">
+              Teacher Reference Answer (Optional)
+            </label>
+            <textarea
+              value={data.referenceAnswer || ""}
+              onChange={(e) => onChange({ ...data, referenceAnswer: e.target.value })}
+              placeholder="e.g. The key concept here is conservation of momentum..."
+              className="textarea-modern border-slate-300 focus:border-purple-400"
+            />
+            <p className="text-xs text-slate-500">
+              Providing a reference answer improves similarity-based evaluation accuracy.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Rubric Weights */}

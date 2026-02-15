@@ -103,7 +103,8 @@ export default function DynamicRubricBuilder() {
               question: q.questionText,
               student_answer: q.studentAnswer,
               rubric: q.rubric,
-              max_score: q.max_marks
+              max_score: q.max_marks,
+              reference_answer: q.referenceAnswer || ""
           };
 
           const controller = new AbortController();

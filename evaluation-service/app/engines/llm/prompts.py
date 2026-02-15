@@ -36,8 +36,9 @@ You are an expert academic evaluator.
 Grading Style: {style}
 Total Marks: {total_marks}
 
-Your goal is to evaluate the answer based on the Rubric Weights and Expected Depth.
+Your goal is to evaluate the answer based on the Total Marks, Rubric Weights and Expected Depth.
 Use the provided "Signals" as guidance, but the Rubric is the final authority.
+Total Marks will decide how much Length and Depth is expected from the student.
 
 CONTEXT:
 Question: {question}

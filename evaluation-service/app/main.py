@@ -33,7 +33,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+# FastAPI app ka entry point
 app.include_router(evaluate_router, prefix="/evaluate")
 
 @app.get("/health")

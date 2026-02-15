@@ -62,7 +62,8 @@ class EvaluationService:
 
         # 2. Layer 2: Signal Generation (NLI, Similarity)
         # These are NOT final scores but signals for the LLM
-        similarity_score = self.similarity_engine.evaluate(request.student_answer, "")
+        reference = request.reference_answer if request.reference_answer else None
+        similarity_score = self.similarity_engine.evaluate(request.student_answer, reference)
         nli_score = self.nli_engine.evaluate(request.question, request.student_answer, "")
         
         # 3. Layer 3: LLM Reasoning

@@ -10,4 +10,5 @@ export type QuestionRubric = {
   studentAnswer: string;
   max_marks: number;
   rubric: RubricWeight;
+  referenceAnswer?: string; // Optional teacher reference answer
 };

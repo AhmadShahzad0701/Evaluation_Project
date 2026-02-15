@@ -22,6 +22,7 @@ class EvaluationRequest(BaseModel):
     max_score: float = 10.0
     total_marks: Optional[float] = None # Overrides max_score if present
     evaluation_style: str = "balanced" # balanced | concept-focused | strict
+    reference_answer: Optional[str] = None
 
 class RubricBreakdown(BaseModel):
     conceptual_understanding: float
