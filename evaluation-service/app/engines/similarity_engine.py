@@ -1,23 +1,22 @@
-import re
 from typing import Optional
-
+from sentence_transformers import SentenceTransformer
+import numpy as np
+from numpy.linalg import norm
 
 class SimilarityEngine:
     """
-    Heuristic-based semantic similarity engine (mock).
-    Produces a stable score between 0.0 and 1.0.
+    Semantic similarity engine using MiniLM embeddings.
+    Uses cosine similarity between sentence embeddings.
     """
 
-    def _normalize(self, text: str) -> set:
-        """
-        Basic text normalization:
-        - lowercase
-        - remove punctuation
-        - split into tokens
-        """
-        text = text.lower()
-        text = re.sub(r"[^a-z0-9\s]", "", text)
-        return set(text.split())
+    def __init__(self):
+        # Lightweight, fast, production-friendly
+        self.model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+    def _cosine_similarity(self, vec1, vec2) -> float:
+        if norm(vec1) == 0 or norm(vec2) == 0:
+            return 0.0
+        return float(np.dot(vec1, vec2) / (norm(vec1) * norm(vec2)))
 
     def evaluate(
         self,
@@ -25,23 +24,25 @@ class SimilarityEngine:
         reference_answer: Optional[str]
     ) -> float:
         """
-        Returns a similarity score between 0 and 1.
+        Returns semantic similarity score between 0.0 and 1.0
         """
 
         if not student_answer or student_answer.strip() == "":
             return 0.0
 
         if not reference_answer:
-            return 0.5  # neutral similarity if no reference exists
+            return 0.5  # fallback neutral behavior (backward compatible)
 
-        student_tokens = self._normalize(student_answer)
-        reference_tokens = self._normalize(reference_answer)
+        embeddings = self.model.encode(
+            [student_answer, reference_answer],
+            convert_to_numpy=True
+        )
 
-        if not student_tokens or not reference_tokens:
-            return 0.0
+        similarity_score = self._cosine_similarity(
+            embeddings[0], embeddings[1]
+        )
 
-        intersection = student_tokens.intersection(reference_tokens)
-        union = student_tokens.union(reference_tokens)
+        # Normalize from [-1,1] to [0,1] just in case
+        similarity_score = (similarity_score + 1) / 2
 
-        similarity_score = len(intersection) / len(union)
-        return round(similarity_score, 2)
+        return round(float(similarity_score), 3)

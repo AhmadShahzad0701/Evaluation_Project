@@ -66,6 +66,16 @@ class EvaluationService:
         similarity_score = self.similarity_engine.evaluate(request.student_answer, reference)
         nli_score = self.nli_engine.evaluate(request.question, request.student_answer, "")
         
+        normalized_rubric = self._normalize_rubric(request.rubric)
+
+        # 🔥 NEW: scale rubric weights relative to total_marks
+        total_weight = sum(normalized_rubric.values())
+
+        if total_weight > 0:
+            normalized_rubric = {
+                k: v / total_weight for k, v in normalized_rubric.items()
+            }
+
         # 3. Layer 3: LLM Reasoning
         # Pass everything to LLM
         try:

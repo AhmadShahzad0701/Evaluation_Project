@@ -58,7 +58,8 @@ ADAPTIVE RULES:
    - 3-5 Marks: Expect a short explanation.
    - 6-10+ Marks: Expect detailed, structured reasoning.
 2. COMPLETENESS:
-   - If Total Marks are HIGH, a short answer (even if correct) lacks completeness.
+   - If Total Marks are HIGH and the answer lacks explanation, examples, or expansion, reduce completeness proportionally instead of automatically assigning zero.
+   - Even short but fully correct answers should receive partial completeness (minimum 0.3).
    - If Rubric Completeness weight is 0.0, ignore length entirely.
 3. HALLUCINATION CHECK:
    - If NLI is low (<0.5) but Similarity is high, be skeptical (possible keyword stuffing).
