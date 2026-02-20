@@ -22,15 +22,15 @@ class NLIEngine:
         student_answer: str,
         reference_answer: Optional[str] = None
     ) -> float:
-        """
-        Returns entailment probability (0.0 - 1.0)
-        """
 
         if not student_answer or student_answer.strip() == "":
             return 0.0
 
-        # Use reference if available, otherwise question
-        premise = reference_answer if reference_answer else question
+        # If no teacher reference → neutral
+        if not reference_answer:
+            return 0.5
+
+        premise = reference_answer
         hypothesis = student_answer
 
         inputs = self.tokenizer(
@@ -47,10 +47,7 @@ class NLIEngine:
         logits = outputs.logits
         probs = F.softmax(logits, dim=1)
 
-        # Label mapping for this model:
-        # 0 = contradiction
-        # 1 = neutral
-        # 2 = entailment
+        # 0=contradiction, 1=neutral, 2=entailment
         entailment_score = probs[0][2].item()
 
         return round(entailment_score, 3)

@@ -97,22 +97,55 @@ class EvaluationService:
 
         # 4. Construct Breakdown & Aggregate
         # Map LLM outputs to our unified schema
+        # 🔥 SAFE ADAPTIVE HYBRID CONCEPT FORMULA
+
+        # 4. Hybrid Concept Stabilization
+
+        llm_concept = llm_result.get("concept", 0.0)
+        concept_importance = normalized_rubric.get("concept", 0.0)
+
+        # Dynamic signal weights
+        nli_w = 0.1 + 0.2 * concept_importance
+        sim_w = 0.25 - 0.15 * concept_importance
+
+        llm_w = 1.0 - (nli_w + sim_w)
+
+        # Ensure LLM dominance
+        if llm_w < 0.5:
+            llm_w = 0.5
+            remaining = 0.5
+            total_signal = nli_w + sim_w
+            if total_signal > 0:
+                nli_w = remaining * (nli_w / total_signal)
+                sim_w = remaining * (sim_w / total_signal)
+
+        hybrid_concept = (
+            llm_w * llm_concept +
+            sim_w * similarity_score +
+            nli_w * nli_score
+        )
+
+        hybrid_concept = max(0.0, min(hybrid_concept, 1.0))
+
+
+        # 5. Construct Breakdown
         breakdown = RubricBreakdown(
-            conceptual_understanding=llm_result.get("concept", 0.0),
+            conceptual_understanding=hybrid_concept,
             completeness_length=llm_result.get("completeness", 0.0),
             language_clarity=llm_result.get("clarity", 0.0),
-            # Legacy fields zeroed out in breakdown, handled in aggregation via mapping if needed
             spelling_accuracy=0.0,
             handling_incorrect=0.0,
             effort_bonus=0.0
         )
 
+        # 6. Aggregate Final Score
         aggregated = self.aggregator.aggregate_adaptive(
             breakdown=breakdown,
             weights=normalized_rubric,
             total_marks=total_marks
         )
 
+        # 7. Return Response
         return EvaluationResponse(
             final_score=aggregated["final_score"],
             percentage=aggregated["percentage"],
@@ -120,13 +153,13 @@ class EvaluationService:
             feedback=llm_result.get("feedback", "No feedback provided."),
             rubric_breakdown=breakdown,
             metrics=Metrics(
-                llm=llm_result.get("concept", 0.0),
+                llm=llm_concept,
                 nli=nli_score,
                 similarity=similarity_score
             ),
             confidence=llm_result.get("confidence", 1.0)
         )
-
+        
     def _normalize_rubric(self, r: RubricWeight) -> dict:
         """
         Normalizes legacy 6-key rubric or new 3-key rubric 
