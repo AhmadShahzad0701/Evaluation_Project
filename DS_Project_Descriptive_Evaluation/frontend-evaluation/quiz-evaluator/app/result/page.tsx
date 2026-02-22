@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import ContextAccordion from "@/components/results/ContextAccordion";
 
 type EvaluationResult = {
   question_id: string;
@@ -17,10 +16,6 @@ type EvaluationResult = {
   };
   rubric: Record<string, number>; // original weights
   confidence: number;
-  // Context fields for the accordion
-  question_text?: string;
-  user_answer?: string;
-  reference_answer?: string;
 };
 
 type EvaluationResponse = {
@@ -113,7 +108,7 @@ export default function ResultPage() {
             {/* Overall Score Card */}
             <div className="premium-card p-6 relative overflow-hidden col-span-1 md:col-span-2">
               <div className={`absolute top-0 left-0 right-0 h-2 bg-gradient-to-r ${gradientColor}`}></div>
-
+              
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <p className="text-sm font-medium text-slate-600 mb-1">Overall Score</p>
@@ -127,7 +122,7 @@ export default function ResultPage() {
                   </div>
                 </div>
                 <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${gradientColor} flex items-center justify-center text-white text-3xl font-bold shadow-xl`}>
-                  {grade}
+{grade}
                 </div>
               </div>
 
@@ -138,7 +133,7 @@ export default function ResultPage() {
                   <span className="text-slate-600">{data.overall_obtained_marks.toFixed(1)} pts</span>
                 </div>
                 <div className="h-4 rounded-full bg-slate-200 overflow-hidden">
-                  <div
+                  <div 
                     className={`h-full bg-gradient-to-r ${gradientColor} transition-all duration-1000 ease-out`}
                     style={{ width: `${percentage}%` }}
                   />
@@ -210,54 +205,47 @@ export default function ResultPage() {
                     </div>
                   </div>
 
-                  {/* Context Accordion */}
-                  <ContextAccordion
-                    questionText={q.question_text}
-                    userAnswer={q.user_answer}
-                    referenceAnswer={q.reference_answer}
-                  />
-
-                  {/* Rubric Breakdown */}
-                  <div className="space-y-3">
+                    {/* Rubric Breakdown */}
+                    <div className="space-y-3">
                     <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      Rubric Breakdown
+                        </svg>
+                        Rubric Breakdown
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {Object.entries(q.breakdown).map(([k, normalizedScore]) => {
-                        // Backend sends normalized score (0-1).
-                        // We need to multiply by the user-defined weight to get the actual points.
-                        // If weight is 0, skip it as per user request.
-                        const weight = q.rubric?.[k] ?? 0;
-                        if (weight === 0) return null;
+                        {Object.entries(q.breakdown).map(([k, normalizedScore]) => {
+                            // Backend sends normalized score (0-1).
+                            // We need to multiply by the user-defined weight to get the actual points.
+                            // If weight is 0, skip it as per user request.
+                            const weight = q.rubric?.[k] ?? 0;
+                            if (weight === 0) return null;
 
-                        const obtained = normalizedScore * weight;
+                            const obtained = normalizedScore * weight;
 
-                        return (
-                          <div
-                            key={k}
-                            className="flex flex-col rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 px-4 py-3 hover:shadow-md transition-all"
-                          >
-                            <div className="flex justify-between items-end mb-2">
-                              <span className="text-sm font-medium text-slate-700">{formatKey(k)}</span>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-slate-900 leading-none">
-                                  {obtained.toFixed(1)} <span className="text-xs text-slate-400 font-normal">/ {weight}</span>
+                            return (
+                                <div
+                                key={k}
+                                className="flex flex-col rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 px-4 py-3 hover:shadow-md transition-all"
+                                >
+                                <div className="flex justify-between items-end mb-2">
+                                    <span className="text-sm font-medium text-slate-700">{formatKey(k)}</span>
+                                    <div className="text-right">
+                                        <div className="text-lg font-bold text-slate-900 leading-none">
+                                            {obtained.toFixed(1)} <span className="text-xs text-slate-400 font-normal">/ {weight}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                              </div>
-                            </div>
-                            {/* Mini bar */}
-                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-purple-500 transition-all duration-500"
-                                style={{ width: `${normalizedScore * 100}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                                {/* Mini bar */}
+                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-purple-500 transition-all duration-500" 
+                                        style={{ width: `${normalizedScore * 100}%` }}
+                                    ></div>
+                                </div>
+                                </div>
+                            );
+                        })}
                     </div>
                   </div>
 

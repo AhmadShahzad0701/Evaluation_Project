@@ -26,29 +26,29 @@ export default function DynamicRubricBuilder() {
 
   const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<QuestionRubric[]>([
-    {
-      questionNo: 1,
-      questionText: "",
-      studentAnswer: "",
-      max_marks: 10,
-      rubric: { ...DEFAULT_RUBRIC },
-    },
-  ]);
-
-  const [isEvaluating, setIsEvaluating] = useState(false);
-
-  const addQuestion = () => {
-    setQuestions((prev) => [
-      ...prev,
       {
-        questionNo: prev.length + 1,
-        questionText: "",
-        studentAnswer: "",
-        max_marks: 10,
-        rubric: { ...DEFAULT_RUBRIC },
-      },
-    ]);
-  };
+       questionNo: 1,
+       questionText: "",
+       studentAnswer: "",
+       max_marks: 10,
+       rubric: { ...DEFAULT_RUBRIC },
+     },
+   ]);
+ 
+   const [isEvaluating, setIsEvaluating] = useState(false);
+ 
+   const addQuestion = () => {
+     setQuestions((prev) => [
+       ...prev,
+       {
+         questionNo: prev.length + 1,
+         questionText: "",
+         studentAnswer: "",
+         max_marks: 10,
+         rubric: { ...DEFAULT_RUBRIC },
+       },
+     ]);
+   };
 
   const updateQuestion = (index: number, updated: QuestionRubric) => {
     setQuestions((prev) =>
@@ -74,21 +74,21 @@ export default function DynamicRubricBuilder() {
         alert(`Question ${q.questionNo}: Student response is required.`);
         return;
       }
-
+      
       // Strict 100% check
       const totalWeight = Object.values(q.rubric).reduce((a, b) => a + b, 0);
       if (Math.abs(totalWeight - 100) > 0.1) {
-        alert(`Question ${q.questionNo}: Rubric weights must sum exactly to 100. Current: ${totalWeight}`);
-        return;
+          alert(`Question ${q.questionNo}: Rubric weights must sum exactly to 100. Current: ${totalWeight}`);
+          return;
       }
     }
 
     try {
       setIsEvaluating(true);
-
+      
       // Feedback for slow responses
       const slowTimer = setTimeout(() => {
-        alert("Evaluation is taking longer than usual (LLM processing). Please wait...");
+          alert("Evaluation is taking longer than usual (LLM processing). Please wait...");
       }, 45000); // 45s warning
 
       await wait(300);
@@ -99,68 +99,63 @@ export default function DynamicRubricBuilder() {
 
       // Sequential evaluation to respect strict single-item contract
       for (const q of questions) {
-        const payload = {
-          question: q.questionText,
-          student_answer: q.studentAnswer,
-          rubric: q.rubric,
-          max_score: q.max_marks,
-          reference_answer: q.referenceAnswer || ""
-        };
+          const payload = {
+              question: q.questionText,
+              student_answer: q.studentAnswer,
+              rubric: q.rubric,
+              max_score: q.max_marks
+          };
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
-        try {
-          const response = await fetch(
-            "http://localhost:8000/evaluate/",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-              signal: controller.signal
+          try {
+            const response = await fetch(
+                "http://localhost:8000/evaluate/",
+                {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+                }
+            );
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Evaluation failed for Question ${q.questionNo}: ${errText}`);
             }
-          );
-          clearTimeout(timeoutId);
 
-          if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Evaluation failed for Question ${q.questionNo}: ${errText}`);
+            const result = await response.json();
+            
+            // Augment result with question metadata for the results page
+            results.push({
+                ...result,
+                question_id: `Q${q.questionNo}`, // Backend might return unknown
+                max_marks: q.max_marks,
+                obtained_marks: result.final_score,
+                breakdown: result.rubric_breakdown, // Mapping for UI
+                signals: result.metrics, // Mapping for UI
+                rubric: q.rubric // Save original weights
+            });
+            
+            overall_max += q.max_marks;
+            overall_obtained += result.final_score;
+
+          } catch (e: any) {
+              if (e.name === 'AbortError') {
+                  throw new Error(`Timeout: Question ${q.questionNo} took too long to evaluate.`);
+              }
+              throw e;
           }
-
-          const result = await response.json();
-
-          // Augment result with question metadata for the results page
-          results.push({
-            ...result,
-            question_id: `Q${q.questionNo}`, // Backend might return unknown
-            max_marks: q.max_marks,
-            obtained_marks: result.final_score,
-            breakdown: result.rubric_breakdown, // Mapping for UI
-            signals: result.metrics, // Mapping for UI
-            rubric: q.rubric, // Save original weights
-            // Context fields for the accordion on the results page
-            question_text: q.questionText,
-            user_answer: q.studentAnswer,
-            reference_answer: q.referenceAnswer || "",
-          });
-
-          overall_max += q.max_marks;
-          overall_obtained += result.final_score;
-
-        } catch (e: any) {
-          if (e.name === 'AbortError') {
-            throw new Error(`Timeout: Question ${q.questionNo} took too long to evaluate.`);
-          }
-          throw e;
-        }
       }
 
       clearTimeout(slowTimer);
 
       const finalResponse = {
-        results,
-        overall_max_marks: overall_max,
-        overall_obtained_marks: parseFloat(overall_obtained.toFixed(2))
+          results,
+          overall_max_marks: overall_max,
+          overall_obtained_marks: parseFloat(overall_obtained.toFixed(2))
       };
 
       localStorage.setItem(
