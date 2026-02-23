@@ -9,6 +9,9 @@ IMPORTANT GRADING RULES:
 5. If the answer does not contain a complete definition or explanation, score must be 0.
 6. Do NOT inflate scores for minor overlaps.
 7. Only award partial marks if the student clearly attempts a full concept.
+RULE 8 — Blunder (Most Important):
+  • If the student make a Massive Blunder which makes the whole Answer Wrong then The LLM Must Pass Zero marks 
+  • Eg Capital of Pakistan if Student Explain but Ask Karachi then it is a Blunder and should be given Zero Marks non negotiable
 
 Question:
 {question}
@@ -90,6 +93,8 @@ Student Answer:  {student_answer}
 SCORING PHILOSOPHY — READ CAREFULLY BEFORE SCORING
 ═══════════════════════════════════════════════════
 
+
+
 RULE 0 — MEANINGFUL TEXT GATE (Non-Negotiable):
   • If the student answer contains NO recognizable words (e.g. "123@#$", "???"),
     return concept: 0.0 and clarity: 0.0. Do not proceed further.
@@ -142,6 +147,8 @@ RULE 8 — COMPLETENESS (Non-punitive):
     - 3-5 marks → minor deductions only for missing key sub-points.
     - 6-10 marks → structured explanation expected; proportional deduction.
   • Minimum completeness for a correct short answer: 0.4
+
+
 
 ═══════════════════════════════════════════════════
 SIGNALS (For context only — do not override the rules above)

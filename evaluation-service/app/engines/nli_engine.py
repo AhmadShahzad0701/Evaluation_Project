@@ -47,7 +47,10 @@ class NLIEngine:
         logits = outputs.logits
         probs = F.softmax(logits, dim=1)
 
-        # 0=contradiction, 1=neutral, 2=entailment
-        entailment_score = probs[0][2].item()
+        # Model label mapping (cross-encoder/nli-distilroberta-base):
+        #   index 0 = contradiction
+        #   index 1 = entailment   ← correct index to use
+        #   index 2 = neutral
+        entailment_score = probs[0][1].item()
 
         return round(entailment_score, 3)

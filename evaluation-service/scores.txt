@@ -1,0 +1,4 @@
+label: idx0 idx1 idx2
+id2label: {0: 'contradiction', 1: 'entailment', 2: 'neutral'}
+CORRECT_ISLAM: 0.092 0.827 0.080
+BLUNDER_KARACH: 0.986 0.005 0.010

@@ -86,7 +86,7 @@ class EvaluationService:
         similarity_score, similarity_band = self.similarity_engine.evaluate_with_band(
             request.student_answer, reference
         )
-        nli_score = self.nli_engine.evaluate(request.question, request.student_answer, "")
+        nli_score = self.nli_engine.evaluate(request.question, request.student_answer, request.reference_answer)
 
         logger.debug(
             f"Signals — similarity: {similarity_score:.3f} [{similarity_band}], "
@@ -121,15 +121,25 @@ class EvaluationService:
         llm_completeness = llm_result.get("completeness", 0.0)
         llm_clarity      = llm_result.get("clarity",      0.0)
 
-        # ── 5. Short-form answer boost ───────────────────────────────────────
-        # If the student gave a ≤ 3-word answer that received a "Full" band
-        # from the SimilarityEngine (exact/token match), enforce the minimum
-        # conceptual score. This is a code-level guardrail complementing the
-        # LLM prompt rules to handle edge cases with model drift.
+        # ── 4b. NLI Blunder Detection (Semantic Kill-Switch) ────────────────
+        # If NLI entailment score is below 0.4 the student's answer logically
+        # contradicts (or fails to entail) the reference — a factual blunder.
+        # Force concept to 0.0 so the Hard Rule awards 0 marks regardless of
+        # what structural similarity or the LLM returned.
+        nli_kill_switch_fired = nli_score < 0.4
+        if nli_kill_switch_fired:
+            llm_concept = 0.0
+            logger.debug(f"NLI Kill Switch triggered (nli={nli_score:.3f}): concept forced to 0.0")
+
+        # ── 5. Conditional short-form guardrail ────────────────────────────
+        # Only boost a short answer when BOTH the NLI engine (entailment > 0.7)
+        # AND the similarity engine (score > 0.8) agree it is correct.
+        # This prevents high structural similarity (e.g. "Karachi" vs
+        # "Islamabad") from bypassing a factual contradiction.
         word_count = len(request.student_answer.strip().split())
-        if word_count <= 3 and similarity_band == "Full":
-            llm_concept = max(llm_concept, 0.85)
-            logger.debug(f"Short-form boost applied: concept → {llm_concept:.3f}")
+        if word_count <= 3 and nli_score > 0.7 and similarity_score > 0.8:
+            llm_concept = max(llm_concept, 0.8)
+            logger.debug(f"Conditional guardrail boost applied: concept → {llm_concept:.3f}")
 
         # ── 6. Balanced Teacher formula ──────────────────────────────────────
         #
@@ -166,11 +176,19 @@ class EvaluationService:
             f"band={similarity_band} | final={final_score}/{total_marks} ({percentage}%)"
         )
 
+        # Build feedback string — prepend NLI warning if kill-switch fired
+        raw_feedback = llm_result.get("feedback", "No feedback provided.")
+        feedback = (
+            "[SYSTEM BLOCK: Factual Contradiction Detected] " + raw_feedback
+            if nli_kill_switch_fired
+            else raw_feedback
+        )
+
         return EvaluationResponse(
             final_score=final_score,
             percentage=percentage,
             grade=grade,
-            feedback=llm_result.get("feedback", "No feedback provided."),
+            feedback=feedback,
             rubric_breakdown=breakdown,
             metrics=Metrics(
                 llm=llm_concept,

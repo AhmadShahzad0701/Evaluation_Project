@@ -132,18 +132,21 @@ class LLMJudge:
         clarity      = max(0.0, min(float(parsed.get("clarity",      0.0)), 1.0))
         feedback     = parsed.get("feedback", "No feedback provided.")
 
-        # ── Guardrail: Full-band entities must always clear 0.85 concept ───
-        # and 0.70 clarity. A correct one-word answer like "Islamabad" must
-        # never be penalised for lacking sentence structure.
-        # Formula floor: (0.85 × 0.8) + (0.70 × 0.2) = 0.82 → 82% minimum.
-        # With concept=1.0: (1.0 × 0.8) + (0.70 × 0.2) = 0.94 → 94%.
+        # ── Conditional guardrail: short CORRECT answer boost ──────────────
+        # The blind 0.85 floor has been removed — it was a "False Safety" that
+        # awarded high marks even for factual blunders like "Karachi" when the
+        # similarity band was "Full" due to structural overlap.
+        #
+        # New rule: only boost concept for short answers when BOTH signals agree
+        # the answer is factually correct:
+        #   NLI entailment score > 0.7  (semantic truth check)
+        #   AND word_count <= 3         (short-form answer)
+        nli_val    = signals.get("nli", 0.0)
         word_count = len(student_answer.strip().split())
-        if similarity_band == "Full":
-            concept = max(concept, 0.85)
-            if word_count <= 3:
-                # Short correct answers get a clarity floor (they're precise,
-                # not verbose — that's a virtue in Quizora, not a flaw).
-                clarity = max(clarity, 0.70)
+        if word_count <= 3 and nli_val > 0.7:
+            concept = max(concept, 0.80)
+            # Short correct answers also get a clarity floor — brevity is precision.
+            clarity = max(clarity, 0.70)
 
         # ── Guardrail: Noise + very short answer → no concept credit ──────
         if similarity_band == "Noise" and word_count <= 3:
