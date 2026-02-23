@@ -121,15 +121,27 @@ class EvaluationService:
         llm_completeness = llm_result.get("completeness", 0.0)
         llm_clarity      = llm_result.get("clarity",      0.0)
 
-        # ── 4b. NLI Blunder Detection (Semantic Kill-Switch) ────────────────
-        # If NLI entailment score is below 0.4 the student's answer logically
-        # contradicts (or fails to entail) the reference — a factual blunder.
-        # Force concept to 0.0 so the Hard Rule awards 0 marks regardless of
-        # what structural similarity or the LLM returned.
-        nli_kill_switch_fired = nli_score < 0.4
+        # ── 4b. NLI Three-Zone Classification ────────────────────────────────
+        #
+        #  Zone A — Hard Contradiction  (nli < 0.10):
+        #    The student's answer logically contradicts the reference.
+        #    Kill-Switch fires: concept forced to 0.0, SYSTEM BLOCK prepended.
+        #    Example: "Karachi" when the answer is "Islamabad".
+        #
+        #  Zone B — Weak Evidence       (0.10 ≤ nli < 0.40):
+        #    Answer is incomplete or under-specified but NOT a factual lie.
+        #    Kill-Switch does NOT fire: LLM's concept score stands as-is.
+        #    The LLM is better placed to judge partial credit here.
+        #
+        #  Zone C — Entailment          (nli ≥ 0.40):
+        #    Normal flow; short-answer boost may apply.
+        #
+        nli_kill_switch_fired = nli_score < 0.1
         if nli_kill_switch_fired:
             llm_concept = 0.0
-            logger.debug(f"NLI Kill Switch triggered (nli={nli_score:.3f}): concept forced to 0.0")
+            logger.debug(f"NLI Kill Switch triggered (nli={nli_score:.3f} < 0.10): concept forced to 0.0")
+        else:
+            logger.debug(f"NLI zone: {'entailment' if nli_score >= 0.4 else 'weak-evidence'} (nli={nli_score:.3f}) — LLM concept preserved")
 
         # ── 5. Conditional short-form guardrail ────────────────────────────
         # Only boost a short answer when BOTH the NLI engine (entailment > 0.7)
